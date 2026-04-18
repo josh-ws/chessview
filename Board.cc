@@ -455,6 +455,7 @@ auto Board::hasOneMove() -> bool {
 auto Board::getMoves(u8 count) -> std::vector<Move> {
     const u8 mycolor = whiteMove() ? WHITE : BLACK;
     std::vector<Move> moves;
+    moves.reserve(64);
 
     // Loop over all squares and find our pieces.
     for (u8 row = 0; row < GRID_LENGTH; ++row)
