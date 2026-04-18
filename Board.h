@@ -146,4 +146,6 @@ struct Board {
     auto isMoveIntoCheck(const Move &move) -> bool;
 };
 
+Board CreateDefaultBoard();
+
 #endif

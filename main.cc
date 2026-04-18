@@ -1,9 +1,16 @@
+#include "Board.h"
+#include "Perft.h"
 #include "Player.h"
 #include "Runner.h"
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <iterator>
+
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using std::chrono::steady_clock;
 
 using PlayerCreator = std::function<std::unique_ptr<Player>()>;
 
@@ -26,6 +33,7 @@ static const auto playerCreators = std::map<std::string, PlayerCreator>{
 };
 
 struct Args {
+    bool isPerft;
     bool isHeadless;
     std::vector<std::string> players;
 };
@@ -35,6 +43,7 @@ static Args parseArgs(int argc, char **argv) {
     auto vec = std::vector<std::string>{argv, argv + argc};
     args.isHeadless =
         std::find(vec.begin(), vec.end(), "-headless") != vec.end();
+    args.isPerft = std::find(vec.begin(), vec.end(), "-perft") != vec.end();
 
     std::copy_if(
         vec.begin(), vec.end(), std::back_inserter(args.players),
@@ -74,6 +83,20 @@ static auto runViewer(std::vector<std::unique_ptr<Player>> &&players) {
 
 int main(int argc, char **argv) {
     const auto args = parseArgs(argc, argv);
+
+    if (args.isPerft) {
+        constexpr int PerftMaxDepth = 6;
+        for (int i = 1; i <= PerftMaxDepth; i++) {
+            auto board = CreateDefaultBoard();
+            auto t1 = steady_clock::now();
+            auto result = Perft(board, i);
+            auto t2 = steady_clock::now();
+            auto ms = duration_cast<milliseconds>(t2 - t1).count();
+            std::cout << "Perft(" << i << "): " << result << " " << ms << "ms"
+                      << "\n";
+        }
+        return EXIT_SUCCESS;
+    }
 
     if (args.players.size() == 0 ||
         (args.isHeadless && args.players.size() != 2)) {

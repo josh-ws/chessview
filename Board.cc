@@ -1,5 +1,28 @@
 #include "Board.h"
 
+Board CreateDefaultBoard() {
+    auto b = Board();
+
+    // Pawns
+    for (int row : {1, 6})
+        for (int column = 0; column < 8; ++column) {
+            u8 color = row == 1 ? WHITE : BLACK;
+            b.setPiece(PAWN | color, column, row);
+        }
+
+    for (int row : {0, 7}) {
+        u8 color = row == 0 ? WHITE : BLACK;
+        b.setPiece(QUEEN | color, 3, row);
+        b.setPiece(KING | color, 4, row);
+        for (int columnMultiplier : {0, 1}) {
+            b.setPiece(BISHOP | color, 2 + (3 * columnMultiplier), row);
+            b.setPiece(KNIGHT | color, 1 + (5 * columnMultiplier), row);
+            b.setPiece(CASTLE | color, 0 + (7 * columnMultiplier), row);
+        }
+    }
+    return b;
+}
+
 Board::Board() : m_pieces{} {}
 
 Board::Board(const Board &other) : m_pieces{} {
@@ -581,17 +604,17 @@ auto Board::isAttacked(u8 column, u8 row) const -> bool {
 
 auto Board::isAttacked(u8 column, u8 row, u8 piece) const -> bool {
 // 2300ms
-#if 0 
-    const u8 piece = pieceAt ( column, row ); 
+#if 0
+    const u8 piece = pieceAt ( column, row );
     if (!piece)
         return false;
 
-    const u8 attackerColor = ((piece & COLOR_MASK) == WHITE)? BLACK : WHITE; 
-    for (u8 r = 0; r < GRID_LENGTH; ++r) 
+    const u8 attackerColor = ((piece & COLOR_MASK) == WHITE)? BLACK : WHITE;
+    for (u8 r = 0; r < GRID_LENGTH; ++r)
         {
         if ( !m_pieces[r] )
-            continue; 
-        for (u8 c = 0; c < GRID_LENGTH; ++c) 
+            continue;
+        for (u8 c = 0; c < GRID_LENGTH; ++c)
             {
             u8 piece = pieceAt ( c, r );
             if (piece && (piece & COLOR_MASK) == attackerColor)
