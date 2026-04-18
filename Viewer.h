@@ -1,7 +1,6 @@
 
 #include "Board.h"
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
+#include <SDL3/SDL.h>
 #include <algorithm>
 #include <functional>
 #include <sstream>
@@ -12,7 +11,7 @@ struct Color {
 };
 
 struct Mouse {
-    int x, y;
+    float x, y;
     bool isGrabbed;   // true if we've held lmb
     bool isReleased;  // true if we've just released lmb
     int grabx, graby; // grab position

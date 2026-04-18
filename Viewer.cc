@@ -1,4 +1,9 @@
 #include "Viewer.h"
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_rect.h>
+#include <SDL3/SDL_surface.h>
+#include <SDL3/SDL_video.h>
+#include <SDL3_image/SDL_image.h>
 
 namespace {
 const Color LIGHT_COLOR = {117, 102, 99, 255};
@@ -11,13 +16,9 @@ const Color HOVER_COLOR = {172, 157, 144, 255};
 Viewer::Viewer(const std::string &name, int width, int height)
     : onNewMove(nullptr), m_keys(), m_quit(false), m_width(width), m_mouse() {
     SDL_Init(SDL_INIT_VIDEO);
-    IMG_Init(IMG_INIT_PNG);
 
-    m_window = SDL_CreateWindow(name.c_str(), SDL_WINDOWPOS_UNDEFINED,
-                                SDL_WINDOWPOS_UNDEFINED, width, height,
-                                SDL_WINDOW_OPENGL);
-
-    m_renderer = SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED);
+    m_window = SDL_CreateWindow(name.c_str(), width, height, 0);
+    m_renderer = SDL_CreateRenderer(m_window, nullptr);
 
     SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
 
@@ -27,7 +28,6 @@ Viewer::Viewer(const std::string &name, int width, int height)
 Viewer::~Viewer() {
     SDL_DestroyWindow(m_window);
     SDL_DestroyRenderer(m_renderer);
-    IMG_Quit();
     SDL_Quit();
 }
 
@@ -68,7 +68,7 @@ auto Viewer::initTextures() -> void {
                     SDL_CreateTextureFromSurface(m_renderer, surface);
                 if (txt)
                     m_pieceTextures[color | piece] = txt;
-                SDL_FreeSurface(surface);
+                SDL_DestroySurface(surface);
             }
         }
 }
@@ -83,10 +83,10 @@ auto Viewer::update() -> void {
     SDL_Event e;
     while (SDL_PollEvent(&e)) {
         switch (e.type) {
-        case SDL_KEYDOWN:
-            m_keys.push_back(e.key.keysym.sym);
+        case SDL_EVENT_KEY_DOWN:
+            m_keys.push_back(e.key.key);
             break;
-        case SDL_QUIT:
+        case SDL_EVENT_QUIT:
             m_quit = true;
             break;
         default:
@@ -106,7 +106,7 @@ auto Viewer::updateMouse() -> void {
     auto state = SDL_GetMouseState(&m_mouse.x, &m_mouse.y);
     m_mouse.isReleased = false;
 
-    if (state & SDL_BUTTON(SDL_BUTTON_LEFT)) // pressing lmb
+    if (state & SDL_BUTTON_MASK(SDL_BUTTON_LEFT)) // pressing lmb
     {
         if (!m_mouse.isGrabbed) {
             m_mouse.isGrabbed = true;
@@ -152,7 +152,10 @@ auto Viewer::drawTiles(const Board &board, const Move &last) -> void {
             else {
                 setColor((x + y) & 1 ? DARK_COLOR : LIGHT_COLOR);
             }
-            SDL_RenderFillRect(m_renderer, &tile);
+
+            SDL_FRect frect;
+            SDL_RectToFRect(&tile, &frect);
+            SDL_RenderFillRect(m_renderer, &frect);
         }
 }
 
@@ -177,7 +180,9 @@ auto Viewer::drawPieces(const Board &board) -> void {
                         tile.y = m_mouse.y - (m_mouse.graby - tile.y);
                     }
                 }
-                SDL_RenderCopy(m_renderer, texture, NULL, &tile);
+                SDL_FRect frect;
+                SDL_RectToFRect(&tile, &frect);
+                SDL_RenderTexture(m_renderer, texture, NULL, &frect);
             }
         }
 }
