@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-Ofast -march=native -pipe -Wall -Wextra -Wfatal-errors -pedantic -Weffc++ -pedantic-errors -g --std=c++20
+CFLAGS=-Ofast -march=native -pipe -Wall -Wextra -Wfatal-errors -pedantic -Weffc++ -pedantic-errors --std=c++20
 DEPENDS=-lSDL3 -lSDL3_image
 OUT=chess
 

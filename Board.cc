@@ -117,7 +117,7 @@ auto Board::isEnPassant(const Move &move) const -> bool {
     if (!(m_bits & DOUBLE_MASK))
         return false;
 
-    const u8 column = m_bits & PAWN_MASK;
+    const u8 column = (m_bits & PAWN_MASK) >> 2;
     const u8 piece = pieceAt(move.fromCol, move.fromRow);
 
     // Moving piece must be a pawn
@@ -375,6 +375,9 @@ auto Board::getBoardState(uint16_t staleHalfMoveClock) -> BoardState {
 auto Board::forceDoMove(const Move &move) -> void {
     const u8 mycolor = whiteMove() ? WHITE : BLACK;
     u8 src = pieceAt(move.fromCol, move.fromRow);
+    const auto isEnpassant = (src & TYPE_MASK) == PAWN && isEnPassant(move);
+
+    m_bits &= ~(DOUBLE_MASK | PAWN_MASK);
 
     if ((src & TYPE_MASK) == CASTLE) // Moving rook for first time
         src = ROOK | mycolor;
@@ -414,7 +417,8 @@ auto Board::forceDoMove(const Move &move) -> void {
         m_bits &= (~(PAWN_MASK | DOUBLE_MASK));
     }
 
-    if ((src & TYPE_MASK) == PAWN || pieceAt(move.toCol, move.toRow) != EMPTY) {
+    if ((src & TYPE_MASK) == PAWN || pieceAt(move.toCol, move.toRow) != EMPTY ||
+        isEnpassant) {
         // Pawn move or capture - clear stale mask
         m_bits &= (~STALE_MASK);
     } else {
@@ -423,6 +427,8 @@ auto Board::forceDoMove(const Move &move) -> void {
 
     setPiece(src, move.toCol, move.toRow);
     removePiece(move.fromCol, move.fromRow);
+    if (isEnpassant)
+        removePiece(move.toCol, move.fromRow);
 
     // Flip whose turn it is
     m_bits ^= BLACKMOVE_MASK;
