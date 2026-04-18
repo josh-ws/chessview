@@ -23,16 +23,18 @@ Board CreateDefaultBoard() {
     return b;
 }
 
-Board::Board() : m_pieces{} {}
+Board::Board() : m_pieces{}, m_kingPos() {}
 
-Board::Board(const Board &other) : m_pieces{} {
+Board::Board(const Board &other) : m_pieces{}, m_kingPos() {
     m_pieces = other.m_pieces;
     m_bits = other.m_bits;
+    m_kingPos = other.m_kingPos;
 }
 
 auto Board::reset() -> void {
     m_pieces.fill(0);
     m_bits = 0;
+    m_kingPos.fill(0);
 }
 
 auto Board::pieceAt(u8 column, u8 row) const -> u8 {
@@ -57,6 +59,12 @@ auto Board::setPiece(u8 piece, u8 column, u8 row) -> void {
     m_pieces[row] &= ~mask;
     // OR on the shift, to set the new piece.
     m_pieces[row] |= shift;
+
+    if ((piece & TYPE_MASK) == KING) {
+        const u8 idx = ((piece & COLOR_MASK) >> 3) * 2;
+        m_kingPos[idx] = column;
+        m_kingPos[idx + 1] = row;
+    }
 }
 
 auto Board::removePiece(u8 column, u8 row) -> void {
@@ -562,22 +570,8 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
 }
 
 auto Board::isCheck(u8 color) -> bool {
-    const u8 myKing = KING | color;
-    // Find king.
-    for (u8 row = 0; row < GRID_LENGTH; ++row)
-        for (u8 column = 0; column < GRID_LENGTH; ++column) {
-            if (pieceAt(column, row) == myKing) {
-                // Return whether king is attacked. Here, we
-                // assume there can be only one king per player,
-                // which makes sense. But worth bearing in mind
-                // in case we start creating weird games/puzzles
-                // with multiple kings.
-                return isAttacked(column, row);
-                // For multiple kings:
-                // if (isAttacked (column, row)) return true;
-            }
-        }
-    return false;
+    const u8 idx = (color >> 3) * 2;
+    return isAttacked(m_kingPos[idx], m_kingPos[idx + 1], KING | color);
 }
 
 auto Board::whiteMove() const -> bool { return !(m_bits & BLACKMOVE_MASK); }

@@ -23,6 +23,8 @@ enum PieceBits {
     WHITE = 8,
 };
 
+enum KingPos { BLACK_COL, BLACK_ROW, WHITE_COL, WHITE_ROW };
+
 // Board state.
 enum BoardState {
     STATE_NORMAL,

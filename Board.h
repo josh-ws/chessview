@@ -102,11 +102,13 @@ struct Board {
         const u32 src = m_pieces[move.fromRow];
         const u32 dest = m_pieces[move.toRow];
         const u8 bits = m_bits;
+        const auto kingPos = m_kingPos;
         forceDoMove(move);
         auto result = func();
         m_pieces[move.fromRow] = src;
         m_pieces[move.toRow] = dest;
         m_bits = bits;
+        m_kingPos = kingPos;
         return result;
     }
 
@@ -125,6 +127,8 @@ struct Board {
     // move. This is for en passant captures. Bit 6 is used to denote that
     // the last move was "stale".
     u8 m_bits = 0U;
+
+    std::array<u8, 4> m_kingPos;
 
     // Do a move without checking if it is legal, just do it.
     auto forceDoMove(const Move &move) -> void;
