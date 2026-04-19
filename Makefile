@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-Og -g3 -march=native -pipe -Wall -Wextra -Wfatal-errors -pedantic -Weffc++ -pedantic-errors --std=c++20
+CFLAGS=-O3  -march=native -pipe -Wall -Wextra -Wfatal-errors -pedantic -Weffc++ -pedantic-errors --std=c++20
 DEPENDS=-lraylib
 OUT=chess
 

@@ -1,25 +1,21 @@
 #include "Player.h"
+#include <cstdlib>
+#include <functional>
 #include <random>
 #include <stdexcept>
 #include <vector>
 
-template <typename T>
-T getRandom(const std::vector<T> &vec) {
-    static std::random_device device;
-    static std::mt19937 mt{device()};
-    std::uniform_int_distribution<> distrib(0, vec.size() - 1);
-    return vec[distrib(mt)];
-}
+using EvalFunction = std::function<int(const Board &, const Move &)>;
 
-static Move RandomSelector(Board &board) {
-    return getRandom(board.getMoves());
+static int RandomEvalFunction(const Board &, const Move &) {
+    return 0; // all moves are equally likely.
 }
 
 const static std::vector<Player> players = {
     Player{
         .name = "random",
         .description = "Plays completely random moves using mt19937",
-        .moveSelector = RandomSelector,
+        .evaluation = RandomEvalFunction,
     },
 };
 
