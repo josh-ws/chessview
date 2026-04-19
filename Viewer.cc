@@ -60,7 +60,7 @@ struct Viewer {
     Board board;
     Transition transition;
     std::optional<Move> lastMove;
-    std::vector<std::unique_ptr<Player>> players;
+    std::vector<Player> players;
 
     Texture2D boardTexture;
     std::unordered_map<u8, Texture2D> pieceTextures;
@@ -96,7 +96,7 @@ struct Viewer {
         if (transition.active)
             return;
         const auto idx = board.whiteMove() ? 0 : 1;
-        const auto move = players[idx]->getMove(board);
+        const auto move = players[idx].GetMove(board);
         const auto captured = board.pieceAt(move.toCol, move.toRow);
         board.doMove(move);
         transition.Start(move, 15, captured);

@@ -6,6 +6,7 @@
 #include <array>
 #include <iostream>
 #include <math.h>
+#include <raylib.h>
 #include <stdint.h>
 #include <unordered_map>
 #include <vector>
@@ -16,6 +17,8 @@ struct Board {
     Board();
     Board(const Board &other);
     auto operator=(const Board &other) = delete;
+
+    inline u8 WhoseTurn() const noexcept { return whiteMove() ? PIECE_WHITE : PIECE_BLACK; }
 
     // Resets the board so there are no pieces, and all flags reset.
     auto reset() -> void;

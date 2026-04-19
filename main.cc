@@ -13,8 +13,6 @@ using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::chrono::steady_clock;
 
-using PlayerCreator = std::function<std::unique_ptr<Player>()>;
-
 constexpr int PerftMaxDepth = 6;
 constexpr int ExpectedViewArguments = 2;
 
@@ -60,7 +58,7 @@ int main(int argc, char **argv) {
 
     if (args.isPlayerList) {
         for (const auto &player : GetPlayerList()) {
-            std::cout << player << '\n';
+            std::cout << player.name << ": " << player.description << '\n';
         }
         return EXIT_SUCCESS;
     }
