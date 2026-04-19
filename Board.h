@@ -102,14 +102,12 @@ struct Board {
     // state.
     template <class T>
     auto tryMove(const Move &move, const T &func) -> decltype(func()) {
-        const auto src = pieceAt(move.fromCol, move.fromRow);
-        const auto target = pieceAt(move.toCol, move.toRow);
+        const auto pieces = m_pieces;
         const u8 bits = m_bits;
         const auto kingPos = m_kingPos;
         forceDoMove(move);
         auto result = func();
-        setPiece(src, move.fromCol, move.fromRow);
-        setPiece(target, move.toCol, move.toRow);
+        m_pieces = pieces;
         m_bits = bits;
         m_kingPos = kingPos;
         return result;
