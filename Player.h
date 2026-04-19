@@ -8,8 +8,10 @@
 #include <memory>
 #include <numeric>
 #include <random>
+#include <vector>
 
-template <typename T> T getRandom(const std::vector<T> &vec) {
+template <typename T>
+T getRandom(const std::vector<T> &vec) {
     static std::random_device device;
     static std::mt19937 mt{device()};
     std::uniform_int_distribution<> distrib(0, vec.size() - 1);
@@ -132,8 +134,8 @@ std::unique_ptr<Player> makeClearPath();
 std::unique_ptr<Player> makeCentre();
 std::unique_ptr<Player> makeBongCloud();
 
-// Defensive (move pieces out of danger)
-// Offensive (capture as much as possible)
-// Active king (prefer king moves and captures)
+std::vector<std::string> GetPlayerList();
+bool IsValidPlayer(const std::string &name);
+std::unique_ptr<Player> MakePlayer(const std::string &name);
 
 #endif

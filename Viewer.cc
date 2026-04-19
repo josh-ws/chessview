@@ -1,212 +1,191 @@
 #include "Viewer.h"
-#include <SDL3/SDL_events.h>
-#include <SDL3/SDL_rect.h>
-#include <SDL3/SDL_surface.h>
-#include <SDL3/SDL_video.h>
-#include <SDL3_image/SDL_image.h>
+#include "Board.h"
 
-namespace {
-const Color LIGHT_COLOR = {117, 102, 99, 255};
-const Color DARK_COLOR = {142, 127, 114, 255};
-const Color LAST_MOVE_COLOR = {102, 102, 0, 125};
-const Color ATTACKED_COLOR = {255, 0, 0, 125};
-const Color HOVER_COLOR = {172, 157, 144, 255};
-} // namespace
+#include "Player.h"
+#include "Types.h"
+#include "raylib.h"
+#include <cassert>
+#include <format>
+#include <memory>
+#include <optional>
+#include <unordered_map>
 
-Viewer::Viewer(const std::string &name, int width, int height)
-    : onNewMove(nullptr), m_keys(), m_quit(false), m_width(width), m_mouse() {
-    SDL_Init(SDL_INIT_VIDEO);
+const Color moveColor = Color(205, 210, 106, 100);
 
-    m_window = SDL_CreateWindow(name.c_str(), width, height, 0);
-    m_renderer = SDL_CreateRenderer(m_window, nullptr);
+std::unordered_map<u8, Texture2D> CreatePieceTextures() {
+    static std::string pieces[] = {"", "pawn", "bishop", "knight", "queen", "king", "rook", "rook"};
 
-    SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
-
-    initTextures();
-}
-
-Viewer::~Viewer() {
-    SDL_DestroyWindow(m_window);
-    SDL_DestroyRenderer(m_renderer);
-    SDL_Quit();
-}
-
-auto Viewer::initTextures() -> void {
-    // Initialise textures
-    for (u8 color : {BLACK, WHITE})
-        for (u8 piece : {BISHOP, KING, KNIGHT, PAWN, QUEEN, ROOK, CASTLE}) {
-            std::stringstream ss;
-            ss << "Img/";
-            switch (piece) {
-            case BISHOP:
-                ss << "bishop";
-                break;
-            case KING:
-                ss << "king";
-                break;
-            case KNIGHT:
-                ss << "knight";
-                break;
-            case QUEEN:
-                ss << "queen";
-                break;
-            case ROOK:
-                ss << "rook";
-                break;
-            case PAWN:
-                ss << "pawn";
-                break;
-            case CASTLE:
-                ss << "rook";
-                break;
-            }
-            ss << "_" << (color == BLACK ? "black" : "white") << ".png";
-
-            SDL_Surface *surface = IMG_Load(ss.str().c_str());
-            if (surface) {
-                SDL_Texture *txt =
-                    SDL_CreateTextureFromSurface(m_renderer, surface);
-                if (txt)
-                    m_pieceTextures[color | piece] = txt;
-                SDL_DestroySurface(surface);
-            }
+    auto textures = std::unordered_map<u8, Texture2D>();
+    for (auto color : {PIECE_BLACK, PIECE_WHITE})
+        for (auto piece : {PIECE_BISHOP, PIECE_KING, PIECE_KNIGHT, PIECE_PAWN, PIECE_QUEEN, PIECE_ROOK, PIECE_CASTLE}) {
+            const auto colorStr = color == PIECE_BLACK ? "black" : "white";
+            const auto path = std::format("Img/{}_{}.png", pieces[piece], colorStr);
+            textures[piece | color] = LoadTexture(path.c_str());
         }
+    return textures;
 }
 
-auto Viewer::setColor(Color c) const -> void {
-    SDL_SetRenderDrawColor(m_renderer, c.red, c.green, c.blue, c.alpha);
-}
+struct Transition {
+    Move move = {};
+    bool active = false;
+    int ticks = 0;
+    int maxTicks = 0;
+    u8 capturedPiece = EMPTY;
 
-auto Viewer::update() -> void {
-    m_keys.clear();
+    void Start(const Move &m, int newTicks, u8 captured) {
+        move = m;
+        active = true;
+        ticks = 0;
+        maxTicks = newTicks;
+        capturedPiece = captured;
+    }
 
-    SDL_Event e;
-    while (SDL_PollEvent(&e)) {
-        switch (e.type) {
-        case SDL_EVENT_KEY_DOWN:
-            m_keys.push_back(e.key.key);
-            break;
-        case SDL_EVENT_QUIT:
-            m_quit = true;
-            break;
-        default:
-            break;
+    void Update() {
+        if (!active)
+            return;
+        if (ticks++ >= maxTicks) {
+            active = false;
+            ticks = 0;
         }
     }
-    updateMouse();
-}
 
-auto Viewer::isPressed(int key) const -> bool {
-    return std::find(m_keys.begin(), m_keys.end(), key) != m_keys.end();
-}
-
-auto Viewer::isQuit() const -> bool { return m_quit; }
-
-auto Viewer::updateMouse() -> void {
-    auto state = SDL_GetMouseState(&m_mouse.x, &m_mouse.y);
-    m_mouse.isReleased = false;
-
-    if (state & SDL_BUTTON_MASK(SDL_BUTTON_LEFT)) // pressing lmb
-    {
-        if (!m_mouse.isGrabbed) {
-            m_mouse.isGrabbed = true;
-            m_mouse.grabx = m_mouse.x;
-            m_mouse.graby = m_mouse.y;
-        }
-    } else // not pressing lmb
-    {
-        if (m_mouse.isGrabbed)
-            m_mouse.isReleased = true;
-        m_mouse.isGrabbed = false;
+    float Interp() const {
+        const auto t = static_cast<float>(ticks) / static_cast<float>(maxTicks);
+        return t * t * (3.0f - 2.0f * t);
     }
-}
+};
 
-auto Viewer::drawTiles(const Board &board, const Move &last) -> void {
-    const u8 tileSize = m_width / GRID_LENGTH;
-    const bool isMoveZero =
-        !last.fromCol && !last.fromRow && !last.toCol && !last.toRow;
+struct Viewer {
+    ViewerOptions options;
+    Board board;
+    Transition transition;
+    std::optional<Move> lastMove;
+    std::vector<std::unique_ptr<Player>> players;
 
-    for (u8 x = 0; x < GRID_LENGTH; ++x)
-        for (u8 y = 0; y < GRID_LENGTH; ++y) {
-            const u8 row = GRID_LENGTH - 1 - y;
-            const u8 piece = board.pieceAt(x, y);
-            const SDL_Rect tile{x * tileSize, row * tileSize, tileSize,
-                                tileSize};
+    Texture2D boardTexture;
+    std::unordered_map<u8, Texture2D> pieceTextures;
 
-            // check for hovering over a tile
-            if (m_mouse.x > tile.x && m_mouse.x <= tile.x + tileSize &&
-                m_mouse.y > tile.y && m_mouse.y <= tile.y + tileSize) {
-                setColor(HOVER_COLOR);
-            }
-            // if this tile participated in the last move, highlight it
-            // specially
-            else if (!isMoveZero && ((last.fromCol == x && last.fromRow == y) ||
-                                     (last.toCol == x && last.toRow == y))) {
-                setColor(LAST_MOVE_COLOR);
-            }
-            // highlight tile in red, if it is a king in check
-            else if ((piece & TYPE_MASK) == KING && board.isAttacked(x, y)) {
-                setColor(ATTACKED_COLOR);
-            }
-            // default, no special activity
-            else {
-                setColor((x + y) & 1 ? DARK_COLOR : LIGHT_COLOR);
-            }
-
-            SDL_FRect frect;
-            SDL_RectToFRect(&tile, &frect);
-            SDL_RenderFillRect(m_renderer, &frect);
+    Viewer(ViewerOptions v)
+        : options(std::move(v)),
+          board(CreateDefaultBoard()),
+          transition(),
+          lastMove(std::nullopt),
+          players(),
+          boardTexture(),
+          pieceTextures() {
+        boardTexture = CreateBoardTexture();
+        pieceTextures = CreatePieceTextures();
+        assert(options.players.size() == 2);
+        for (const auto &player : options.players) {
+            players.emplace_back(MakePlayer(player));
         }
-}
+    }
 
-auto Viewer::drawPieces(const Board &board) -> void {
-    const u8 tileSize = m_width / GRID_LENGTH;
-    for (u8 x = 0; x < GRID_LENGTH; ++x)
-        for (u8 y = 0; y < GRID_LENGTH; ++y) {
-            const u8 row = GRID_LENGTH - 1 - y;
-            const u8 piece = board.pieceAt(x, y);
-            SDL_Rect tile{x * tileSize, row * tileSize, tileSize, tileSize};
+    inline constexpr int TileSize() const { return options.width / 8; }
 
-            if (piece != EMPTY) {
-                SDL_Texture *texture = m_pieceTextures[piece];
-                // check for if we're grabbing this piece
-                if (m_mouse.isGrabbed) {
-                    const u8 gridGrabX = m_mouse.grabx / tileSize;
-                    const u8 gridGrabY =
-                        GRID_LENGTH - 1 - (m_mouse.graby / tileSize);
-                    if (x == gridGrabX && y == gridGrabY) {
-                        // move draw position for texture
-                        tile.x = m_mouse.x - (m_mouse.grabx - tile.x);
-                        tile.y = m_mouse.y - (m_mouse.graby - tile.y);
-                    }
-                }
-                SDL_FRect frect;
-                SDL_RectToFRect(&tile, &frect);
-                SDL_RenderTexture(m_renderer, texture, NULL, &frect);
+    void Update() {
+        const auto state = board.getBoardState(0);
+        if (state != STATE_NORMAL)
+            return;
+
+        transition.Update();
+        DoNextMove();
+    }
+
+    void DoNextMove() {
+        if (transition.active)
+            return;
+        const auto idx = board.whiteMove() ? 0 : 1;
+        const auto move = players[idx]->getMove(board);
+        const auto captured = board.pieceAt(move.toCol, move.toRow);
+        board.doMove(move);
+        transition.Start(move, 15, captured);
+        lastMove = move;
+    }
+
+    void Draw() const {
+        BeginDrawing();
+        DrawBoard();
+        DrawSpecialTiles();
+        DrawPieces();
+        DrawTransitionPieces();
+        EndDrawing();
+    }
+
+    void DrawBoard() const {
+        DrawTexture(boardTexture, 0, 0, WHITE);
+    }
+
+    void DrawSpecialTiles() const {
+        if (lastMove) {
+            DrawRectangleF(lastMove->fromCol * TileSize(), lastMove->fromRow * TileSize(), TileSize(), TileSize(), moveColor);
+            DrawRectangleF(lastMove->toCol * TileSize(), lastMove->toRow * TileSize(), TileSize(), TileSize(), moveColor);
+        }
+    }
+
+    void DrawPieces() const {
+        for (int col = 0; col < GRID_LENGTH; col++) {
+            for (int row = 0; row < GRID_LENGTH; row++) {
+                const auto piece = board.pieceAt(col, row);
+                if (transition.active && transition.move.toCol == col && transition.move.toRow == row)
+                    continue;
+                if (piece == EMPTY)
+                    continue;
+                const auto texture = pieceTextures.at(piece);
+                DrawTextureF(texture, col * TileSize(), row * TileSize());
             }
         }
-}
+    }
 
-auto Viewer::doMovement() -> void {
-    if (!onNewMove)
-        return;
+    void DrawTransitionPieces() const {
+        if (!transition.active)
+            return;
+        const auto fromX = transition.move.fromCol * TileSize();
+        const auto fromY = transition.move.fromRow * TileSize();
+        const auto toX = transition.move.toCol * TileSize();
+        const auto toY = transition.move.toRow * TileSize();
 
-    const u8 tileSize = m_width / GRID_LENGTH;
-    const u8 fromCol = m_mouse.grabx / tileSize;
-    const u8 toCol = m_mouse.x / tileSize;
-    const u8 fromRow = GRID_LENGTH - 1 - (m_mouse.graby / tileSize);
-    const u8 toRow = GRID_LENGTH - 1 - (m_mouse.y / tileSize);
+        const auto piece = board.pieceAt(transition.move.toCol, transition.move.toRow);
+        if (piece == EMPTY)
+            return;
+        const auto texture = pieceTextures.at(piece);
+        const auto x = fromX + (toX - fromX) * transition.Interp();
+        const auto y = fromY + (toY - fromY) * transition.Interp();
 
-    Move m{fromCol, toCol, fromRow, toRow};
-    onNewMove(m);
-}
+        if (transition.capturedPiece != EMPTY && transition.Interp() < 0.9f)
+            DrawTextureF(pieceTextures.at(transition.capturedPiece), toX, toY);
+        DrawTextureF(texture, x, y);
+    }
 
-auto Viewer::draw(Board &board, const Move &last) -> void {
-    SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
-    SDL_RenderClear(m_renderer);
-    drawTiles(board, last);
-    drawPieces(board);
-    if (m_mouse.isReleased)
-        doMovement();
-    SDL_RenderPresent(m_renderer);
+    void DrawRectangleF(int posX, int posY, int w, int h, Color color) const {
+        DrawRectangle(posX, options.height - posY - TileSize(), w, h, color);
+    }
+
+    void DrawTextureF(Texture2D texture, int posX, int posY) const {
+        DrawTexture(texture, posX, options.height - posY - TileSize(), WHITE);
+    }
+
+    Texture2D CreateBoardTexture() {
+        auto target = LoadRenderTexture(options.width, options.height);
+        BeginTextureMode(target);
+        for (int col = 0; col < GRID_LENGTH; col++) {
+            for (int row = 0; row < GRID_LENGTH; row++) {
+                const auto color = (col + row) & 1 ? LIGHTGRAY : DARKGRAY;
+                DrawRectangle(col * TileSize(), row * TileSize(), TileSize(), TileSize(), color);
+            }
+        }
+        EndTextureMode();
+        return target.texture;
+    }
+};
+
+void RunViewer(const ViewerOptions &options) {
+
+    InitWindow(options.width, options.height, options.title.c_str());
+    SetTargetFPS(60);
+    auto vw = Viewer(options);
+    while (!WindowShouldClose()) {
+        vw.Update();
+        vw.Draw();
+    }
 }

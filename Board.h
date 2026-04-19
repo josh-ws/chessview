@@ -99,14 +99,14 @@ struct Board {
     // state.
     template <class T>
     auto tryMove(const Move &move, const T &func) -> decltype(func()) {
-        const u32 src = m_pieces[move.fromRow];
-        const u32 dest = m_pieces[move.toRow];
+        const auto src = pieceAt(move.fromCol, move.fromRow);
+        const auto target = pieceAt(move.toCol, move.toRow);
         const u8 bits = m_bits;
         const auto kingPos = m_kingPos;
         forceDoMove(move);
         auto result = func();
-        m_pieces[move.fromRow] = src;
-        m_pieces[move.toRow] = dest;
+        setPiece(src, move.fromCol, move.fromRow);
+        setPiece(target, move.toCol, move.toRow);
         m_bits = bits;
         m_kingPos = kingPos;
         return result;
@@ -118,7 +118,7 @@ struct Board {
     // Since a chess grid is 8x8, this means we can encode each row as 4
     // bits x 8 bits = 32 bits - a single u32. So, m_pieces is 8 u32s, one
     // for each row on the board.
-    std::array<u32, GRID_LENGTH> m_pieces;
+    std::array<u8, GRID_LENGTH * GRID_LENGTH> m_pieces;
 
     // Board state bits.
     // Bit 0 is used for when it is black's move. (True = black's move)

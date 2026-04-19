@@ -1,4 +1,5 @@
 #include "Board.h"
+#include "Types.h"
 
 Board CreateDefaultBoard() {
     auto b = Board();
@@ -6,18 +7,18 @@ Board CreateDefaultBoard() {
     // Pawns
     for (int row : {1, 6})
         for (int column = 0; column < 8; ++column) {
-            u8 color = row == 1 ? WHITE : BLACK;
-            b.setPiece(PAWN | color, column, row);
+            u8 color = row == 1 ? PIECE_WHITE : PIECE_BLACK;
+            b.setPiece(PIECE_PAWN | color, column, row);
         }
 
     for (int row : {0, 7}) {
-        u8 color = row == 0 ? WHITE : BLACK;
-        b.setPiece(QUEEN | color, 3, row);
-        b.setPiece(KING | color, 4, row);
+        u8 color = row == 0 ? PIECE_WHITE : PIECE_BLACK;
+        b.setPiece(PIECE_QUEEN | color, 3, row);
+        b.setPiece(PIECE_KING | color, 4, row);
         for (int columnMultiplier : {0, 1}) {
-            b.setPiece(BISHOP | color, 2 + (3 * columnMultiplier), row);
-            b.setPiece(KNIGHT | color, 1 + (5 * columnMultiplier), row);
-            b.setPiece(CASTLE | color, 0 + (7 * columnMultiplier), row);
+            b.setPiece(PIECE_BISHOP | color, 2 + (3 * columnMultiplier), row);
+            b.setPiece(PIECE_KNIGHT | color, 1 + (5 * columnMultiplier), row);
+            b.setPiece(PIECE_CASTLE | color, 0 + (7 * columnMultiplier), row);
         }
     }
     return b;
@@ -38,29 +39,18 @@ auto Board::reset() -> void {
 }
 
 auto Board::pieceAt(u8 column, u8 row) const -> u8 {
-    // If we have a black pawn at column 1, then the row will look like
-    // 0b[...]00010000. Shifting right by 1 * 4 = 4 gives us
-    // 0b[...]00000001. Then bitwise AND with 0b1111 to give us 0b0001.
-    return (m_pieces[row] >> (column * 4)) & PIECE_MASK;
+    return m_pieces[column * GRID_LENGTH + row];
 }
 
 auto Board::colorAt(u8 column, u8 row) const -> u8 {
     // Odd numbered tiles are white. (0, 0) is black, (1, 0) is white, and
     // so forth.
-    return (column + row) & 1 ? WHITE : BLACK;
+    return (column + row) & 1 ? PIECE_WHITE : PIECE_BLACK;
 }
 
 auto Board::setPiece(u8 piece, u8 column, u8 row) -> void {
-    // If piece is a black pawn (1) at column 2, then shift 0b0001 left by 2
-    // * 4 = 8. Mask then arrives at 0b000100000000.
-    u32 mask = PIECE_MASK << (column * 4);
-    u32 shift = piece << (column * 4);
-    // NOT on the mask, to clear this entire piece in the row.
-    m_pieces[row] &= ~mask;
-    // OR on the shift, to set the new piece.
-    m_pieces[row] |= shift;
-
-    if ((piece & TYPE_MASK) == KING) {
+    m_pieces[column * GRID_LENGTH + row] = piece;
+    if ((piece & TYPE_MASK) == PIECE_KING) {
         const u8 idx = ((piece & COLOR_MASK) >> 3) * 2;
         m_kingPos[idx] = column;
         m_kingPos[idx + 1] = row;
@@ -70,9 +60,7 @@ auto Board::setPiece(u8 piece, u8 column, u8 row) -> void {
 auto Board::removePiece(u8 column, u8 row) -> void {
     // Mask is set to PIECE_MASK (0b1111) shifted by column * 4. So if
     // column = 2 then mask = 0b111100000000.
-    const u32 mask = PIECE_MASK << (column * 4);
-    // Clear this mask in the row to wipe the piece.
-    m_pieces[row] &= ~mask;
+    m_pieces[column * GRID_LENGTH + row] = EMPTY;
 }
 
 auto Board::inBounds(u8 column, u8 row) const -> bool {
@@ -88,7 +76,7 @@ auto Board::inBounds(const Move &move) const -> bool {
 
 auto Board::isMoveLegal(const Move &move) -> bool {
     // Whose turn is it?
-    const u8 mycolor = whiteMove() ? WHITE : BLACK;
+    const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
 
     // Move not in bounds, so is immediately illegal
     if (!inBounds(move))
@@ -105,7 +93,7 @@ auto Board::isMoveLegal(const Move &move) -> bool {
     else if ((piece & COLOR_MASK) != mycolor) // Piece at source cannot be moved
                                               // by the provided player
         return false;
-    else if ((piece & TYPE_MASK) != PAWN &&
+    else if ((piece & TYPE_MASK) != PIECE_PAWN &&
              move.promotion) // Promoting a non pawn
         return false;
 
@@ -115,7 +103,7 @@ auto Board::isMoveLegal(const Move &move) -> bool {
         (target & COLOR_MASK) == mycolor) // Capture is against same color piece
         return false;
     // Capture is against the King (technically the king cannot be captured)
-    else if ((target & TYPE_MASK) == KING)
+    else if ((target & TYPE_MASK) == PIECE_KING)
         return false;
 
     return isMoveLegalForPiece(piece, move) && !isMoveIntoCheck(move);
@@ -129,7 +117,7 @@ auto Board::isEnPassant(const Move &move) const -> bool {
     const u8 piece = pieceAt(move.fromCol, move.fromRow);
 
     // Moving piece must be a pawn
-    if ((piece & TYPE_MASK) != PAWN)
+    if ((piece & TYPE_MASK) != PIECE_PAWN)
         return false;
 
     // Must be trying to take on the same column as the last move
@@ -137,9 +125,9 @@ auto Board::isEnPassant(const Move &move) const -> bool {
         return false;
 
     switch (piece & COLOR_MASK) {
-    case BLACK:
+    case PIECE_BLACK:
         return move.fromRow == 3 && move.toRow == 2;
-    case WHITE:
+    case PIECE_WHITE:
         return move.fromRow == 4 && move.toRow == 5;
     }
     return false; // to stop warnings, but this should never be hit
@@ -199,11 +187,11 @@ auto Board::isMoveLegalForPiece(u8 piece, const Move &move) -> bool {
         return false;
 
     switch (piece & TYPE_MASK) {
-    case BISHOP:
+    case PIECE_BISHOP:
         // Bishop can only move diagonally, so the delta row MUST equal
         // the delta column (otherwise we're moving staggered)
         return dcol == drow && !isBlockedOnDiagonal();
-    case KING:
+    case PIECE_KING:
         // King can only move one tile at a time, but in any direction
         if (dcol <= 1 && drow <= 1)
             return true;
@@ -213,7 +201,7 @@ auto Board::isMoveLegalForPiece(u8 piece, const Move &move) -> bool {
             const u8 castleColumn = dir == -1 ? 0 : 7;
             const u8 castle = pieceAt(castleColumn, move.fromRow);
 
-            if ((castle & TYPE_MASK) != CASTLE)
+            if ((castle & TYPE_MASK) != PIECE_CASTLE)
                 return false;
 
             // Cannot move from, through or into check (but into
@@ -233,28 +221,28 @@ auto Board::isMoveLegalForPiece(u8 piece, const Move &move) -> bool {
             return true;
         }
         return false;
-    case KNIGHT:
+    case PIECE_KNIGHT:
         // Knight can only move in an L shape; one of the directions
         // must be 2 and one must be 1, exactly.
         return (dcol == 2 && drow == 1) || (dcol == 1 && drow == 2);
-    case PAWN: {
+    case PIECE_PAWN: {
         // Bit more complex for pawns.
         // Pawns can only move diagonally when capturing, and only 2
         // tiles from the initial square.
         const u8 color = piece & COLOR_MASK;
         const int dir = getDir(move.fromRow, move.toRow);
-        if (color == WHITE && dir == -1) // White moving backwards
+        if (color == PIECE_WHITE && dir == -1) // White moving backwards
             return false;
-        else if (color == BLACK && dir == 1) // Same for black
+        else if (color == PIECE_BLACK && dir == 1) // Same for black
             return false;
 
         if (move.promotion) // Attempting to promote a pawn - is it
                             // legal?
         {
-            if (move.toRow != ((color == WHITE) ? GRID_LENGTH - 1 : 0))
+            if (move.toRow != ((color == PIECE_WHITE) ? GRID_LENGTH - 1 : 0))
                 return false;
             const u8 pro = move.promotion & TYPE_MASK;
-            if (pro != KNIGHT && pro != QUEEN && pro != BISHOP && pro != ROOK)
+            if (pro != PIECE_KNIGHT && pro != PIECE_QUEEN && pro != PIECE_BISHOP && pro != PIECE_ROOK)
                 return false;
         }
 
@@ -282,8 +270,8 @@ auto Board::isMoveLegalForPiece(u8 piece, const Move &move) -> bool {
 
         // Can only move two spaces if moving from initial square
         // For white, this is row 1; for black, this is row 6; (0 based)
-        if (drow == 2 && ((color == WHITE && move.fromRow != 1) ||
-                          (color == BLACK && move.fromRow != 6)))
+        if (drow == 2 && ((color == PIECE_WHITE && move.fromRow != 1) ||
+                          (color == PIECE_BLACK && move.fromRow != 6)))
             return false;
 
         // Not attacking, so if there is a piece at target then this is
@@ -297,14 +285,14 @@ auto Board::isMoveLegalForPiece(u8 piece, const Move &move) -> bool {
 
         return true;
     }
-    case QUEEN:
+    case PIECE_QUEEN:
         // If moving diagonally, can only move row and column being the
         // same (straight diagonal)
         if (drow && dcol && drow != dcol)
             return false;
         return (drow && dcol) ? !isBlockedOnDiagonal() : !isBlockedOnAxis();
-    case ROOK:
-    case CASTLE:
+    case PIECE_ROOK:
+    case PIECE_CASTLE:
         // Rook can only move sideways or vertically, so delta row must
         // be 0 or delta column must be 0, otherwise we are moving
         // diagonally
@@ -315,7 +303,7 @@ auto Board::isMoveLegalForPiece(u8 piece, const Move &move) -> bool {
 }
 
 auto Board::isMoveIntoCheck(const Move &move) -> bool {
-    const u8 mycolor = whiteMove() ? WHITE : BLACK;
+    const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
     // Use tryMove to just perform the move and see if we're in check.
     bool inCheckPostMove =
         tryMove(move, [this, &mycolor, &move]() { return isCheck(mycolor); });
@@ -331,7 +319,7 @@ auto Board::doMove(const Move &move) -> bool {
 }
 
 auto Board::getBoardState(uint16_t staleHalfMoveClock) -> BoardState {
-    const u8 mycolor = whiteMove() ? WHITE : BLACK;
+    const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
     // zero moves
     if (hasZeroMoves()) {
         // if zero moves and in check, that's checkmate - otherwise
@@ -357,20 +345,20 @@ auto Board::getBoardState(uint16_t staleHalfMoveClock) -> BoardState {
         const u8 row = i / GRID_LENGTH;
         const u8 column = i % GRID_LENGTH;
         const u8 piece = pieceAt(column, row);
-        if ((piece & TYPE_MASK) != KING) {
+        if ((piece & TYPE_MASK) != PIECE_KING) {
             alivePiece[numPieces++] = {(u8)(piece & TYPE_MASK),
                                        (u8)(piece & COLOR_MASK),
                                        colorAt(column, row)};
         }
     }
     // no pieces but kings, or one piece and it's a knight/bishop
-    if (numPieces == 0 || (numPieces == 1 && (alivePiece[0].type == KNIGHT ||
-                                              alivePiece[0].type == BISHOP)))
+    if (numPieces == 0 || (numPieces == 1 && (alivePiece[0].type == PIECE_KNIGHT ||
+                                              alivePiece[0].type == PIECE_BISHOP)))
         return STATE_FORCED_DRAW_INSUFFICIENT_MATERIAL;
     // two pieces, and both bishops of same color
     else if (numPieces == 2) {
         bool isBothBishop =
-            alivePiece[0].type == BISHOP && alivePiece[1].type == BISHOP;
+            alivePiece[0].type == PIECE_BISHOP && alivePiece[1].type == PIECE_BISHOP;
         bool isOppositePlayer = alivePiece[0].color != alivePiece[1].color;
         bool isSameTile = alivePiece[0].tileColor == alivePiece[1].tileColor;
         if (isBothBishop && isOppositePlayer && isSameTile)
@@ -381,16 +369,16 @@ auto Board::getBoardState(uint16_t staleHalfMoveClock) -> BoardState {
 }
 
 auto Board::forceDoMove(const Move &move) -> void {
-    const u8 mycolor = whiteMove() ? WHITE : BLACK;
+    const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
     u8 src = pieceAt(move.fromCol, move.fromRow);
-    const auto isEnpassant = (src & TYPE_MASK) == PAWN && isEnPassant(move);
+    const auto isEnpassant = (src & TYPE_MASK) == PIECE_PAWN && isEnPassant(move);
 
     m_bits &= ~(DOUBLE_MASK | PAWN_MASK);
 
-    if ((src & TYPE_MASK) == CASTLE) // Moving rook for first time
-        src = ROOK | mycolor;
+    if ((src & TYPE_MASK) == PIECE_CASTLE) // Moving rook for first time
+        src = PIECE_ROOK | mycolor;
 
-    else if ((src & TYPE_MASK) == KING) {
+    else if ((src & TYPE_MASK) == PIECE_KING) {
         // castling
         if (move.fromCol == 4 && (move.toCol == 6 || move.toCol == 2)) {
             const bool kingSide = move.toCol == 6;
@@ -399,17 +387,17 @@ auto Board::forceDoMove(const Move &move) -> void {
             const u8 rookTargetCol = kingSide ? 5 : 3;
 
             removePiece(rookSourceCol, row);
-            setPiece(ROOK | mycolor, rookTargetCol, row);
+            setPiece(PIECE_ROOK | mycolor, rookTargetCol, row);
         } else // king moving, but not a castle
         {
-            const u8 row = mycolor == WHITE ? 0 : 7;
+            const u8 row = mycolor == PIECE_WHITE ? 0 : 7;
             for (u8 col : {0, 7})
-                if (pieceAt(col, row) == (CASTLE | mycolor))
-                    setPiece(ROOK | mycolor, col, row);
+                if (pieceAt(col, row) == (PIECE_CASTLE | mycolor))
+                    setPiece(PIECE_ROOK | mycolor, col, row);
         }
     }
     // Do promotion
-    else if ((src & TYPE_MASK) == PAWN) {
+    else if ((src & TYPE_MASK) == PIECE_PAWN) {
         // double pawn move
         if ((move.fromRow == 1 && move.toRow == 3) ||
             (move.fromRow == 6 && move.toRow == 4)) {
@@ -425,7 +413,7 @@ auto Board::forceDoMove(const Move &move) -> void {
         m_bits &= (~(PAWN_MASK | DOUBLE_MASK));
     }
 
-    if ((src & TYPE_MASK) == PAWN || pieceAt(move.toCol, move.toRow) != EMPTY ||
+    if ((src & TYPE_MASK) == PIECE_PAWN || pieceAt(move.toCol, move.toRow) != EMPTY ||
         isEnpassant) {
         // Pawn move or capture - clear stale mask
         m_bits &= (~STALE_MASK);
@@ -453,7 +441,7 @@ auto Board::hasOneMove() -> bool {
 }
 
 auto Board::getMoves(u8 count) -> std::vector<Move> {
-    const u8 mycolor = whiteMove() ? WHITE : BLACK;
+    const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
     std::vector<Move> moves;
     moves.reserve(64);
 
@@ -473,7 +461,7 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
             const u8 piece = pieceAt(column, row);
             if ((piece & COLOR_MASK) == mycolor) {
                 switch (piece & TYPE_MASK) {
-                case BISHOP: {
+                case PIECE_BISHOP: {
                     // Check all diagonal vectors
                     for (int c : {-1, 1})
                         for (int r : {-1, 1})
@@ -482,7 +470,7 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
                                 tryAddMove(col, rw);
                     break;
                 }
-                case KING: {
+                case PIECE_KING: {
                     // For King, we just need to try and
                     // move to all 8 surrounding tiles
                     for (int c : {-1, 0, 1})
@@ -493,7 +481,7 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
                     tryAddMove(column + 2, row);
                     break;
                 }
-                case KNIGHT: {
+                case PIECE_KNIGHT: {
                     // For knight, try all pieces that are
                     // delta row = 2 and delta column = 1 or
                     // delta row = 1 and delta column = 2.
@@ -503,7 +491,7 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
                                 tryAddMove(column + c, row + r);
                     break;
                 }
-                case PAWN: {
+                case PIECE_PAWN: {
                     // All possible pawn moves; +1 row, +2
                     // rows, +1 row +1 column (for capture).
                     u8 color = piece & COLOR_MASK;
@@ -514,7 +502,7 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
 
                             // Check for promotion
                             const u8 newRow =
-                                (color == WHITE) ? row + dr : row - dr;
+                                (color == PIECE_WHITE) ? row + dr : row - dr;
                             const bool isPromote =
                                 (newRow == GRID_LENGTH - 1) ||
                                 newRow == 0; // Black
@@ -527,7 +515,7 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
                                              // can't get
                                              // to rank 0
                             if (isPromote) {
-                                for (u8 type : {QUEEN, KNIGHT, ROOK, BISHOP})
+                                for (u8 type : {PIECE_QUEEN, PIECE_KNIGHT, PIECE_ROOK, PIECE_BISHOP})
                                     tryAddMove(column + dc, newRow, type);
                             } else {
                                 tryAddMove(column + dc, newRow);
@@ -535,7 +523,7 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
                         }
                     break;
                 }
-                case QUEEN: {
+                case PIECE_QUEEN: {
                     // Queen, we need to check all diagnoal
                     // vectors + the horizontal and vertical
                     // axis
@@ -547,8 +535,8 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
                                     tryAddMove(col, rw);
                     break;
                 }
-                case ROOK:
-                case CASTLE: {
+                case PIECE_ROOK:
+                case PIECE_CASTLE: {
                     // Try horizontal and vertical vectors.
                     for (int mult : {-1, 1}) {
                         for (int col = column + mult; inBounds(col, row);
@@ -572,7 +560,7 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
 
 auto Board::isCheck(u8 color) -> bool {
     const u8 idx = (color >> 3) * 2;
-    return isAttacked(m_kingPos[idx], m_kingPos[idx + 1], KING | color);
+    return isAttacked(m_kingPos[idx], m_kingPos[idx + 1], PIECE_KING | color);
 }
 
 auto Board::whiteMove() const -> bool { return !(m_bits & BLACKMOVE_MASK); }
@@ -582,14 +570,14 @@ auto Board::enPassantColumn() const -> u8 {
 }
 
 auto Board::canCastle(u8 color, bool queenSide) -> bool {
-    if (color == WHITE && !queenSide)
-        return pieceAt(7, 0) == (CASTLE | color);
-    else if (color == WHITE && queenSide)
-        return pieceAt(0, 0) == (CASTLE | color);
-    else if (color == BLACK && !queenSide)
-        return pieceAt(7, 7) == (CASTLE | color);
-    else if (color == BLACK && queenSide)
-        return pieceAt(0, 7) == (CASTLE | color);
+    if (color == PIECE_WHITE && !queenSide)
+        return pieceAt(7, 0) == (PIECE_CASTLE | color);
+    else if (color == PIECE_WHITE && queenSide)
+        return pieceAt(0, 0) == (PIECE_CASTLE | color);
+    else if (color == PIECE_BLACK && !queenSide)
+        return pieceAt(7, 7) == (PIECE_CASTLE | color);
+    else if (color == PIECE_BLACK && queenSide)
+        return pieceAt(0, 7) == (PIECE_CASTLE | color);
     else
         return false;
 }
@@ -604,36 +592,10 @@ auto Board::isAttacked(u8 column, u8 row) const -> bool {
 }
 
 auto Board::isAttacked(u8 column, u8 row, u8 piece) const -> bool {
-// 2300ms
-#if 0
-    const u8 piece = pieceAt ( column, row );
-    if (!piece)
-        return false;
-
-    const u8 attackerColor = ((piece & COLOR_MASK) == WHITE)? BLACK : WHITE;
-    for (u8 r = 0; r < GRID_LENGTH; ++r)
-        {
-        if ( !m_pieces[r] )
-            continue;
-        for (u8 c = 0; c < GRID_LENGTH; ++c)
-            {
-            u8 piece = pieceAt ( c, r );
-            if (piece && (piece & COLOR_MASK) == attackerColor)
-                {
-                Move move { c, column, r, row, attackerColor };
-                if ( isMoveLegalForPiece ( piece, move ) )
-                    return true;
-                }
-            }
-        }
-    return false;
-#endif
-// 1750ms
-#if 1
-    const u8 attackerColor = (piece & COLOR_MASK) == WHITE ? BLACK : WHITE;
+    const u8 attackerColor = (piece & COLOR_MASK) == PIECE_WHITE ? PIECE_BLACK : PIECE_WHITE;
     // First of all, check knight moves
     // All squares around the tile that are +2 rows, +2 colums. (or -ve)
-    const u8 knight = (KNIGHT | attackerColor);
+    const u8 knight = (PIECE_KNIGHT | attackerColor);
     for (int r : {-1, 1})
         for (int c : {-1, 1}) {
             if (inBounds(column + c * 2, row + r) &&
@@ -671,24 +633,24 @@ auto Board::isAttacked(u8 column, u8 row, u8 piece) const -> bool {
                 const u8 dcol = abs(c - column);
                 const u8 drow = abs(r - row);
                 switch (attackerPiece & TYPE_MASK) {
-                case BISHOP:
+                case PIECE_BISHOP:
                     if (dcol && drow && dcol == drow)
                         return true;
                     break;
-                case KING:
+                case PIECE_KING:
                     if (dcol <= 1 && drow <= 1)
                         return true;
                     break;
-                case PAWN:
+                case PIECE_PAWN:
                     if (dcol == 1 &&
                         rowMove ==
-                            ((attackerColor & COLOR_MASK) == WHITE ? -1 : 1))
+                            ((attackerColor & COLOR_MASK) == PIECE_WHITE ? -1 : 1))
                         return true;
                     break;
-                case QUEEN:
+                case PIECE_QUEEN:
                     return true;
-                case ROOK:
-                case CASTLE:
+                case PIECE_ROOK:
+                case PIECE_CASTLE:
                     if ((dcol && !drow) || (!dcol && drow))
                         return true;
                     break;
@@ -696,5 +658,4 @@ auto Board::isAttacked(u8 column, u8 row, u8 piece) const -> bool {
             }
         }
     return false;
-#endif
 }

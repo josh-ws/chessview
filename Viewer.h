@@ -1,50 +1,16 @@
+#ifndef VIEWER_HPP
+#define VIEWER_HPP
 
-#include "Board.h"
-#include <SDL3/SDL.h>
-#include <algorithm>
-#include <functional>
-#include <sstream>
-#include <unordered_map>
+#include <string>
+#include <vector>
 
-struct Color {
-    u8 red, green, blue, alpha;
+struct ViewerOptions {
+    std::string title;
+    int width;
+    int height;
+    std::vector<std::string> players;
 };
 
-struct Mouse {
-    float x, y;
-    bool isGrabbed;   // true if we've held lmb
-    bool isReleased;  // true if we've just released lmb
-    int grabx, graby; // grab position
-};
+void RunViewer(const ViewerOptions &options);
 
-struct Viewer {
-    Viewer(const std::string &name, int width, int height);
-    ~Viewer();
-    Viewer(const Viewer &other) = delete;
-    bool operator=(const Viewer &other) = delete;
-
-    auto draw(Board &board, const Move &last) -> void;
-    auto update() -> void; // updates current key presses
-
-    auto isPressed(int key) const -> bool;
-    auto isQuit() const -> bool;
-
-    std::function<void(Move &)> onNewMove;
-
-  protected:
-    SDL_Window *m_window = nullptr;
-    SDL_Renderer *m_renderer = nullptr;
-    std::unordered_map<u8, SDL_Texture *> m_pieceTextures = {};
-    std::vector<int> m_keys;
-    bool m_quit;
-    int m_width;
-    Mouse m_mouse;
-
-    auto drawTiles(const Board &board, const Move &last) -> void;
-    auto drawPieces(const Board &board) -> void;
-    auto doMovement() -> void;
-
-    auto updateMouse() -> void;
-    auto initTextures() -> void;
-    auto setColor(Color c) const -> void;
-};
+#endif

@@ -1,11 +1,6 @@
 # chessview
 
-**chessview** is an application for interacting with Chess bots and making it easy to add your own.
-
-- Play games against silly or interesting bots.
-- Watch bots play games against each other.
-- Simulate many bot games.
-- Run tournaments with many chess bots (TODO).
+**chessview** is an application for interacting with Chess bots and making it easy to add your own. Its main purpose is to watch your own bots play against each other, although it is a full-fledged chess engine in itself.
 
 It was originally written sometime in 2020.
 
@@ -25,21 +20,40 @@ Then run `make` in the root directory. It will generate a `chess` binary.
 
 ### Command line
 
+#### Perft
+
+Perft mode runs a [Perft](https://www.chessprogramming.org/Perft) check using the built-in board representation to a depth of 6.
+
+```
+$ chessview --perft
+Perft(1): 20 0ms
+Perft(2): 400 0ms
+Perft(3): 8902 1ms
+...
+```
+
+#### Player list
+
+To obtain a list of available bots:
+
+`chessview --players`
+
+```
+$ chessview --players
+blacksquares
+bongcloud
+centre
+...
+```
+
+#### Running a bot game
+
 To run a game, specify which bots to play for both white and black sides:
 
-`chess [-headless] [white] black`
-
-- If running headless, you must specify both white and black.
-- If using the UI, you can specify only black; you will play as white.
-- A game will be run with the specified players.
-  - `-headless` option disables the UI for the game.
-  - Options for `black` and `white` players are described below.
-
-### Controls (with single game mode)
-
-- **Space**: Play/pause the playback.
-- **Left arrow**: When paused, steps backwards through the moves.
-- **Right arrow**: When paused, steps forwards through moves. If user has undone some moves, this will playback the same moves; otherwise, new moves are selected from the players as normal.
+```
+$ chessview white black
+...
+```
 
 ### Players
 

@@ -12,18 +12,16 @@ using u32 = uint_least32_t;
 // 0b1110 (14).
 enum PieceBits {
     EMPTY = 0,
-    BLACK = 0,
-    PAWN = 1,
-    BISHOP = 2,
-    KNIGHT = 3,
-    QUEEN = 4,
-    KING = 5,
-    ROOK = 6,
-    CASTLE = 7,
-    WHITE = 8,
+    PIECE_BLACK = 0,
+    PIECE_PAWN = 1,
+    PIECE_BISHOP = 2,
+    PIECE_KNIGHT = 3,
+    PIECE_QUEEN = 4,
+    PIECE_KING = 5,
+    PIECE_ROOK = 6,
+    PIECE_CASTLE = 7,
+    PIECE_WHITE = 8,
 };
-
-enum KingPos { BLACK_COL, BLACK_ROW, WHITE_COL, WHITE_ROW };
 
 // Board state.
 enum BoardState {

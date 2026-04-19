@@ -1,4 +1,7 @@
 #include "Player.h"
+#include <functional>
+#include <memory>
+#include <vector>
 
 // Eval Player
 
@@ -105,7 +108,7 @@ auto WhiteSquares::evalBoard(Board &board) const -> u32 {
         for (int r = 0; r < GRID_LENGTH; ++r) {
             u8 piece = board.pieceAt(c, r);
             if (piece != EMPTY && (piece & COLOR_MASK) == color) {
-                if (board.colorAt(c, r) == WHITE)
+                if (board.colorAt(c, r) == PIECE_WHITE)
                     countWhite++;
             }
         }
@@ -120,7 +123,7 @@ auto BlackSquares::evalBoard(Board &board) const -> u32 {
             u8 piece = board.pieceAt(c, r);
 
             if (piece != EMPTY && (piece & COLOR_MASK) == color) {
-                if (board.colorAt(c, r) == BLACK)
+                if (board.colorAt(c, r) == PIECE_BLACK)
                     countBlack++;
             }
         }
@@ -129,13 +132,13 @@ auto BlackSquares::evalBoard(Board &board) const -> u32 {
 
 // Min opponent moves.
 auto MinimizeOpponentMoves::evalBoard(Board &board) const -> u32 {
-    u8 oppColor = color == WHITE ? BLACK : WHITE;
+    u8 oppColor = color == PIECE_WHITE ? PIECE_BLACK : PIECE_WHITE;
     return 100 - board.getMoves(oppColor).size();
 }
 
 // Max opponent moves.
 auto MaximizeOpponentMoves::evalBoard(Board &board) const -> u32 {
-    u8 oppColor = color == WHITE ? BLACK : WHITE;
+    u8 oppColor = color == PIECE_WHITE ? PIECE_BLACK : PIECE_WHITE;
     return board.getMoves(oppColor).size();
 }
 
@@ -185,7 +188,7 @@ auto Suicidal::evalBoard(Board &board) const -> u32 {
 auto Pacifist::evalBoard(Board &board) const -> u32 {
     u8 pieces = 0;
     u8 piecesAttacked = 0;
-    u8 enemy = (color == BLACK ? WHITE : BLACK);
+    u8 enemy = (color == PIECE_BLACK ? PIECE_WHITE : PIECE_BLACK);
     for (int c = 0; c < GRID_LENGTH; ++c)
         for (int r = 0; r < GRID_LENGTH; ++r) {
             u8 piece = board.pieceAt(c, r);
@@ -202,7 +205,7 @@ auto Pacifist::evalBoard(Board &board) const -> u32 {
 auto Offensive::evalBoard(Board &board) const -> u32 {
     u8 pieces = 0;
     u8 piecesAttacked = 0;
-    u8 enemy = (color == BLACK ? WHITE : BLACK);
+    u8 enemy = (color == PIECE_BLACK ? PIECE_WHITE : PIECE_BLACK);
     for (int c = 0; c < GRID_LENGTH; ++c)
         for (int r = 0; r < GRID_LENGTH; ++r) {
             u8 piece = board.pieceAt(c, r);
@@ -229,9 +232,9 @@ auto BongCloud::evalPiece(u8 piece, u8 column, u8) const -> u8 {
     u8 type = piece & TYPE_MASK;
     u8 ret = 0U;
 
-    if (m_move == 0 && type == PAWN && (column == 3 || column == 4))
+    if (m_move == 0 && type == PIECE_PAWN && (column == 3 || column == 4))
         ret = UINT8_MAX;
-    else if (m_move == 1 && type == KING)
+    else if (m_move == 1 && type == PIECE_KING)
         ret = UINT8_MAX;
     return ret;
 }
@@ -284,4 +287,38 @@ std::unique_ptr<Player> makeCentre() { return std::make_unique<Centre>(); }
 
 std::unique_ptr<Player> makeBongCloud() {
     return std::make_unique<BongCloud>();
+}
+
+// List of available players
+static const auto playerCreators = std::map<std::string, std::function<std::unique_ptr<Player>()>>{
+    {"random", makeRandom},
+    {"whitesquares", makeWhiteSquares},
+    {"blacksquares", makeBlackSquares},
+    {"min", makeMinimizeOpponentMoves},
+    {"max", makeMaximizeOpponentMoves},
+    {"min_self", makeMinimizeOwnMoves},
+    {"max_self", makeMaximizeOwnMoves},
+    {"defensive", makeDefensive},
+    {"offensive", makeOffensive},
+    {"suicidal", makeSuicidal},
+    {"pacifist", makePacifist},
+    {"edge", makeClearPath},
+    {"centre", makeCentre},
+    {"bongcloud", makeBongCloud},
+};
+
+std::vector<std::string> GetPlayerList() {
+    auto results = std::vector<std::string>();
+    for (const auto &[key, _] : playerCreators) {
+        results.push_back(key);
+    }
+    return results;
+}
+
+bool IsValidPlayer(const std::string &name) {
+    return playerCreators.contains(name);
+}
+
+std::unique_ptr<Player> MakePlayer(const std::string &name) {
+    return playerCreators.at(name)();
 }

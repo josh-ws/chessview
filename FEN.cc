@@ -3,13 +3,13 @@
 namespace FEN {
 static auto getCastleString(Board *board) -> std::string {
     std::string str = "";
-    if (board->canCastle(WHITE, false))
+    if (board->canCastle(PIECE_WHITE, false))
         str.push_back('K');
-    if (board->canCastle(WHITE, true))
+    if (board->canCastle(PIECE_WHITE, true))
         str.push_back('Q');
-    if (board->canCastle(BLACK, false))
+    if (board->canCastle(PIECE_BLACK, false))
         str.push_back('k');
-    if (board->canCastle(BLACK, true))
+    if (board->canCastle(PIECE_BLACK, true))
         str.push_back('q');
     return str == "" ? "-" : str;
 }
@@ -28,20 +28,20 @@ static auto getEnPassantString(Board *board) -> std::string {
 }
 
 static auto toChar(u8 piece) -> char {
-    const char lower = (piece & COLOR_MASK) == BLACK ? 32 : 0;
+    const char lower = (piece & COLOR_MASK) == PIECE_BLACK ? 32 : 0;
     switch (piece & TYPE_MASK) {
-    case PAWN:
+    case PIECE_PAWN:
         return 'P' | lower;
-    case BISHOP:
+    case PIECE_BISHOP:
         return 'B' | lower;
-    case KNIGHT:
+    case PIECE_KNIGHT:
         return 'N' | lower;
-    case QUEEN:
+    case PIECE_QUEEN:
         return 'Q' | lower;
-    case KING:
+    case PIECE_KING:
         return 'K' | lower;
-    case CASTLE:
-    case ROOK:
+    case PIECE_CASTLE:
+    case PIECE_ROOK:
         return 'R' | lower;
     default:
         return '?';
