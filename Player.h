@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <vector>
 
-using EvalFunction = std::function<int(const Board &, const Move &)>;
+using EvalFunction = std::function<int(Board &, const Move &)>;
 
 struct Player {
     std::string name;

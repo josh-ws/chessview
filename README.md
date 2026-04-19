@@ -59,24 +59,21 @@ $ chessview white black
 
 These are the built-in bots, ready to play against.
 
-| Name           | Description                                                                                                                                          |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `random`       | Plays a random move from the set of available moves. Makes for interesting but silly games.                                                          |
-| `whitesquares` | Ranks moves according to how many pieces fall onto white squares and prefers these. Leads to interesting aesthetic patterns.                         |
-| `blacksquares` | Like `whitesquares`, but for black squares (obviously).                                                                                              |
-| `min`          | Makes plays in order to minimize the number of counter moves the opponent has. Is actually quite decent at chess, since usually ends up checkmating. |
-| `max`          | Like `min`, but _maximizes_ the number of responses the opponent has.                                                                                |
-| `min_self`     | Minimizes the number of moves that self has.                                                                                                         |
-| `max_self`     | Maximizes the number of moves that self has.                                                                                                         |
-| `defensive`    | Plays in order to minimize the number of its own pieces being captured and under attack.                                                             |
-| `offensive`    | Plays in order to maximize the number of opponent pieces being captured and under attack.                                                            |
-| `suicidal`     | Opposite of `defensive`; plays in order to maximize the number of its own pieces being captures and under attack.                                    |
-| `pacifist`     | Opposite of `offensive`; plays in order to minimize the number of opponent pieces being captured and under attack.                                   |
-| `centre`       | Plays in order to control the centre d and e files.                                                                                                  |
-| `edge`         | Opposite of `centre`; plays to control the a and h files.                                                                                            |
-| `aggressive`   | Plays to push its pieces to the opposite rank. Pushes one piece and then keeps moving that piece back and forth. Quite boring.                       |
-| `passive`      | Plays to prevent pushing its pieces at all; insanely boring (and terrible.)                                                                          |
-| `bongcloud`    | Opens with bongcloud (move pawn, then King) and then plays randomly.                                                                                 |
+- random: Plays completely random moves using mt19937
+- whitesquares: Plays moves that land pieces on white tiles
+- blacksquares: Plays moves that land pieces on black tiles
+- center: Moves pieces as close to the center as possible
+- min_oppt: Tries to minimize the number of moves the opponent has
+- max_oppt: Tries to maximize the number of moves the opponent has
+- min_self: Tries to minimize the number of moves that the player has
+- max_self: Tries to maximize the number of moves that the player has
+- defensive: Tries to minimize the number of own pieces under attack
+- offensive: Tries to maximize the number of enemy pieces under attack
+- reckless: Tries to maximize the number of own pieces under attack
+- pacifist: Tries to minumize the number of enemy pieces under attack
+- edge: Tries to move pieces towards the edge of the board
+- aggressive: Tries to move pieces towards the enemy's side
+- passive: Tries not to move pieces towards the enemy's side
 
 ## Features
 
