@@ -4,11 +4,9 @@
 #include "Move.h"
 #include "Types.h"
 #include <array>
-#include <iostream>
 #include <math.h>
 #include <raylib.h>
 #include <stdint.h>
-#include <unordered_map>
 #include <vector>
 
 struct Change {
@@ -107,24 +105,8 @@ struct Board {
 
   protected:
     std::array<u8, GRID_LENGTH * GRID_LENGTH> m_pieces;
-
-    // Board state bits.
-    // Bit 0 is used for when it is black's move. (True = black's move)
-    // Bit 1 is used when a pawn has made a double move. This is for en
-    // passant captures. Bits 2-5 are used for the column of the double pawn
-    // move. This is for en passant captures. Bit 6 is used to denote that
-    // the last move was "stale".
     u8 m_bits = 0U;
-
     std::array<u8, 4> m_kingPos;
-
-    // Checks whether the specified column and row is within the confines of
-    // the board.
-    auto inBounds(u8 column, u8 row) const -> bool;
-
-    // Checks whether the source tile and target tile of the move is within
-    // the confines of the board.
-    auto inBounds(const Move &move) const -> bool;
 
     // Checks whether the piece can move in the manner specified. For
     // example, no pawns moving 3 tiles, no kings moving 2 tiles, etc.
@@ -135,6 +117,27 @@ struct Board {
     auto isMoveIntoCheck(const Move &move) -> bool;
 };
 
-Board CreateDefaultBoard();
+inline constexpr Board CreateDefaultBoard() {
+    auto b = Board();
+
+    // Pawns
+    for (int row : {1, 6})
+        for (int column = 0; column < 8; ++column) {
+            u8 color = row == 1 ? PIECE_WHITE : PIECE_BLACK;
+            b.setPiece(PIECE_PAWN | color, column, row);
+        }
+
+    for (int row : {0, 7}) {
+        u8 color = row == 0 ? PIECE_WHITE : PIECE_BLACK;
+        b.setPiece(PIECE_QUEEN | color, 3, row);
+        b.setPiece(PIECE_KING | color, 4, row);
+        for (int columnMultiplier : {0, 1}) {
+            b.setPiece(PIECE_BISHOP | color, 2 + (3 * columnMultiplier), row);
+            b.setPiece(PIECE_KNIGHT | color, 1 + (5 * columnMultiplier), row);
+            b.setPiece(PIECE_CASTLE | color, 0 + (7 * columnMultiplier), row);
+        }
+    }
+    return b;
+}
 
 #endif

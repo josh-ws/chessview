@@ -2,27 +2,12 @@
 #include "Types.h"
 #include <cstdlib>
 
-Board CreateDefaultBoard() {
-    auto b = Board();
+constexpr bool IsInBounds(int col, int row) {
+    return col >= 0 && row >= 0 && col < GRID_LENGTH && row < GRID_LENGTH;
+}
 
-    // Pawns
-    for (int row : {1, 6})
-        for (int column = 0; column < 8; ++column) {
-            u8 color = row == 1 ? PIECE_WHITE : PIECE_BLACK;
-            b.setPiece(PIECE_PAWN | color, column, row);
-        }
-
-    for (int row : {0, 7}) {
-        u8 color = row == 0 ? PIECE_WHITE : PIECE_BLACK;
-        b.setPiece(PIECE_QUEEN | color, 3, row);
-        b.setPiece(PIECE_KING | color, 4, row);
-        for (int columnMultiplier : {0, 1}) {
-            b.setPiece(PIECE_BISHOP | color, 2 + (3 * columnMultiplier), row);
-            b.setPiece(PIECE_KNIGHT | color, 1 + (5 * columnMultiplier), row);
-            b.setPiece(PIECE_CASTLE | color, 0 + (7 * columnMultiplier), row);
-        }
-    }
-    return b;
+constexpr int Index(int col, int row) {
+    return col * GRID_LENGTH + row;
 }
 
 Board::Board() : m_pieces{}, m_kingPos() {}
@@ -40,17 +25,16 @@ auto Board::reset() -> void {
 }
 
 auto Board::pieceAt(u8 column, u8 row) const -> u8 {
-    return m_pieces[column * GRID_LENGTH + row];
+    return m_pieces[Index(column, row)];
 }
 
 auto Board::colorAt(u8 column, u8 row) const -> u8 {
-    // Odd numbered tiles are white. (0, 0) is black, (1, 0) is white, and
-    // so forth.
+    // Odd numbered tiles are white. (0, 0) is black, (1, 0) is white, and so forth.
     return (column + row) & 1 ? PIECE_WHITE : PIECE_BLACK;
 }
 
 auto Board::setPiece(u8 piece, u8 column, u8 row) -> void {
-    m_pieces[column * GRID_LENGTH + row] = piece;
+    m_pieces[Index(column, row)] = piece;
     if ((piece & TYPE_MASK) == PIECE_KING) {
         const u8 idx = ((piece & COLOR_MASK) >> 3) * 2;
         m_kingPos[idx] = column;
@@ -59,20 +43,7 @@ auto Board::setPiece(u8 piece, u8 column, u8 row) -> void {
 }
 
 auto Board::removePiece(u8 column, u8 row) -> void {
-    // Mask is set to PIECE_MASK (0b1111) shifted by column * 4. So if
-    // column = 2 then mask = 0b111100000000.
-    m_pieces[column * GRID_LENGTH + row] = EMPTY;
-}
-
-auto Board::inBounds(u8 column, u8 row) const -> bool {
-    return column < GRID_LENGTH && row < GRID_LENGTH;
-}
-
-auto Board::inBounds(const Move &move) const -> bool {
-    // Both source and target tile must be in bounds, otherwise the move is
-    // illegal.
-    return inBounds(move.fromCol, move.fromRow) &&
-           inBounds(move.toCol, move.toRow);
+    m_pieces[Index(column, row)] = EMPTY;
 }
 
 auto Board::isMoveLegal(const Move &move) -> bool {
@@ -80,7 +51,7 @@ auto Board::isMoveLegal(const Move &move) -> bool {
     const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
 
     // Move not in bounds, so is immediately illegal
-    if (!inBounds(move))
+    if (!IsInBounds(move.fromCol, move.fromRow) || !IsInBounds(move.toCol, move.toRow))
         return false;
 
     // Move that does nothing
@@ -394,7 +365,7 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
                     return;
                 int col = column + dc;
                 int rw = row + dr;
-                while (inBounds(col, rw)) {
+                while (IsInBounds(col, rw)) {
                     const auto piece = pieceAt(col, rw);
                     if (piece != EMPTY && (piece & COLOR_MASK) == WhoseTurn())
                         break; // blocked by own piece
@@ -532,11 +503,9 @@ auto Board::isAttacked(u8 column, u8 row, u8 piece) const -> bool {
     const u8 knight = (PIECE_KNIGHT | attackerColor);
     for (int r : {-1, 1})
         for (int c : {-1, 1}) {
-            if (inBounds(column + c * 2, row + r) &&
-                pieceAt(column + c * 2, row + r) == knight)
+            if (IsInBounds(column + c * 2, row + r) && pieceAt(column + c * 2, row + r) == knight)
                 return true;
-            else if (inBounds(column + c, row + r * 2) &&
-                     pieceAt(column + c, row + r * 2) == knight)
+            else if (IsInBounds(column + c, row + r * 2) && pieceAt(column + c, row + r * 2) == knight)
                 return true;
         }
 
