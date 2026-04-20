@@ -63,7 +63,9 @@ const static std::vector<Player> players = {
         .evaluation = [](Board &board, const Move &) {
             int score = 0;
             for (const auto &move : board.getMoves()) {
-                score += board.tryMove(move, [&]() { return -board.getMoves().size(); });
+                const auto u = board.MakeNewMove(move);
+                score += -board.getMoves().size();
+                board.UndoMove(u);
             }
             return score;
         },
@@ -74,7 +76,9 @@ const static std::vector<Player> players = {
         .evaluation = [](Board &board, const Move &) {
             int score = 0;
             for (const auto &move : board.getMoves()) {
-                score += board.tryMove(move, [&]() { return board.getMoves().size(); });
+                const auto u = board.MakeNewMove(move);
+                score += board.getMoves().size();
+                board.UndoMove(u);
             }
             return score;
         },

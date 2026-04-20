@@ -26,7 +26,9 @@ struct Player {
         static thread_local auto rng = std::mt19937{std::random_device{}()};
         for (size_t i = 0; i < moves.size(); ++i) {
             const auto &move = moves[i];
-            const auto newScore = board.tryMove(move, [&]() { return evaluation(board, move); });
+            const auto u = board.MakeNewMove(move);
+            const auto newScore = evaluation(board, move);
+            board.UndoMove(u);
             if (newScore > score) {
                 score = newScore;
                 idx = i;

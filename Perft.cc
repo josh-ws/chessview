@@ -10,8 +10,9 @@ std::uint64_t Perft(Board &board, int depth) {
 
     std::uint64_t total = 0;
     for (const auto &move : moves) {
-        total += board.tryMove(
-            move, [&board, depth]() { return Perft(board, depth - 1); });
+        const auto u = board.MakeNewMove(move);
+        total += Perft(board, depth - 1);
+        board.UndoMove(u);
     }
     return total;
 }

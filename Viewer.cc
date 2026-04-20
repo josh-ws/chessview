@@ -98,7 +98,7 @@ struct Viewer {
         const auto idx = board.whiteMove() ? 0 : 1;
         const auto move = players[idx].GetMove(board);
         const auto captured = board.pieceAt(move.toCol, move.toRow);
-        board.doMove(move);
+        board.MakeNewMove(move);
         transition.Start(move, 15, captured);
         lastMove = move;
     }

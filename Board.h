@@ -11,6 +11,18 @@
 #include <unordered_map>
 #include <vector>
 
+struct Change {
+    u8 index;
+    u8 value;
+};
+
+struct Undo {
+    u8 bits;
+    std::array<u8, 4> king;
+    std::array<Change, 5> changes;
+    int nChanges;
+};
+
 // Holds board state.
 // Board state is held in m_pieces.
 struct Board {
@@ -42,9 +54,8 @@ struct Board {
     // piece can move as desired, checks checkmate conditions, etc.
     auto isMoveLegal(const Move &move) -> bool;
 
-    // Performs a move. Calls isMoveLegal() first to ensure the move is
-    // legal.
-    auto doMove(const Move &move) -> bool;
+    Undo MakeNewMove(const Move &move);
+    void UndoMove(const Undo &undo);
 
     // Returns the number of moves for the specified player (color) WHITE or
     // BLACK. Specify count as non-zero to restrict the result to [count]
@@ -96,22 +107,6 @@ struct Board {
     // Returns whether the last move was "stale", i.e. no pawn move and no
     // capture
     auto isStale() -> bool;
-
-    // Try a move and then revert the board state.
-    // The function f() is a user-specified function to check the board
-    // state.
-    template <class T>
-    auto tryMove(const Move &move, const T &func) -> decltype(func()) {
-        const auto pieces = m_pieces;
-        const u8 bits = m_bits;
-        const auto kingPos = m_kingPos;
-        forceDoMove(move);
-        auto result = func();
-        m_pieces = pieces;
-        m_bits = bits;
-        m_kingPos = kingPos;
-        return result;
-    }
 
   protected:
     // Board pieces.

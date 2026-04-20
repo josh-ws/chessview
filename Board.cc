@@ -1,5 +1,6 @@
 #include "Board.h"
 #include "Types.h"
+#include <cstdlib>
 
 Board CreateDefaultBoard() {
     auto b = Board();
@@ -303,19 +304,11 @@ auto Board::isMoveLegalForPiece(u8 piece, const Move &move) -> bool {
 }
 
 auto Board::isMoveIntoCheck(const Move &move) -> bool {
-    const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
-    // Use tryMove to just perform the move and see if we're in check.
-    bool inCheckPostMove =
-        tryMove(move, [this, &mycolor, &move]() { return isCheck(mycolor); });
-    return inCheckPostMove;
-}
-
-auto Board::doMove(const Move &move) -> bool {
-    // Check if the move is legal and then do it if it is.
-    bool moveLegal = isMoveLegal(move);
-    if (moveLegal)
-        forceDoMove(move);
-    return moveLegal;
+    const auto mycolor = WhoseTurn();
+    const auto u = MakeNewMove(move);
+    const auto ischeck = isCheck(mycolor);
+    UndoMove(u);
+    return ischeck;
 }
 
 auto Board::getBoardState(uint16_t staleHalfMoveClock) -> BoardState {
@@ -661,4 +654,82 @@ auto Board::isAttacked(u8 column, u8 row, u8 piece) const -> bool {
             }
         }
     return false;
+}
+
+Undo Board::MakeNewMove(const Move &move) {
+    Undo u;
+    u.nChanges = 0;
+    u.bits = m_bits;
+    u.king = m_kingPos;
+
+    auto record = [&](u8 col, u8 row) {
+        const u8 idx = col * GRID_LENGTH + row;
+        u.changes[u.nChanges++] = {idx, m_pieces[idx]};
+    };
+
+    auto src = pieceAt(move.fromCol, move.fromRow);
+    const auto mycolor = WhoseTurn();
+    const auto typ = src & TYPE_MASK;
+
+    const auto isCapture = pieceAt(move.toCol, move.toRow) != EMPTY;
+    const auto isEP = (src & TYPE_MASK) == PIECE_PAWN && isEnPassant(move);
+    const auto isCastling = move.fromCol == 4 && (move.toCol == 6 || move.toCol == 2);
+
+    m_bits &= ~(DOUBLE_MASK | PAWN_MASK);
+    src = typ == PIECE_CASTLE ? (PIECE_ROOK | mycolor) : src;
+
+    if (typ == PIECE_KING) {
+        if (isCastling) {
+            const auto kingSide = move.toCol == 6;
+            const auto rFrom = kingSide ? 7 : 0;
+            const auto rTo = kingSide ? 5 : 3;
+            record(rFrom, move.fromRow);
+            record(rTo, move.fromRow);
+            removePiece(rFrom, move.fromRow);
+            setPiece(PIECE_ROOK | mycolor, rTo, move.fromRow);
+        } else {
+            for (auto col : {0, 7}) {
+                if (pieceAt(col, move.fromRow) == (PIECE_CASTLE | mycolor)) {
+                    record(col, move.fromRow);
+                    setPiece(PIECE_ROOK | mycolor, col, move.fromRow);
+                }
+            }
+        }
+    }
+
+    if (typ == PIECE_PAWN) {
+        if (abs(move.fromRow - move.toRow) == 2) {
+            m_bits |= DOUBLE_MASK;
+            m_bits |= (move.fromCol << 2);
+        }
+        if (move.promotion) {
+            src = (move.promotion & TYPE_MASK) | mycolor;
+        }
+    }
+
+    if (typ == PIECE_PAWN || isCapture || isEP) {
+        m_bits &= ~STALE_MASK;
+    } else {
+        m_bits |= STALE_MASK;
+    }
+
+    record(move.toCol, move.toRow);
+    record(move.fromCol, move.fromRow);
+    setPiece(src, move.toCol, move.toRow);
+    removePiece(move.fromCol, move.fromRow);
+    if (isEP) {
+        record(move.toCol, move.fromRow);
+        removePiece(move.toCol, move.fromRow);
+    }
+
+    m_bits ^= BLACKMOVE_MASK;
+    return u;
+}
+
+void Board::UndoMove(const Undo &undo) {
+    for (int i = 0; i < undo.nChanges; i++) {
+        m_pieces[undo.changes[i].index] = undo.changes[i].value;
+    }
+    m_bits = undo.bits;
+    m_kingPos = undo.king;
 }
