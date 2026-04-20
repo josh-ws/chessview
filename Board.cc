@@ -361,68 +361,6 @@ auto Board::getBoardState(uint16_t staleHalfMoveClock) -> BoardState {
     return STATE_NORMAL;
 }
 
-auto Board::forceDoMove(const Move &move) -> void {
-    const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
-    u8 src = pieceAt(move.fromCol, move.fromRow);
-    const auto isEnpassant = (src & TYPE_MASK) == PIECE_PAWN && isEnPassant(move);
-
-    m_bits &= ~(DOUBLE_MASK | PAWN_MASK);
-
-    if ((src & TYPE_MASK) == PIECE_CASTLE) // Moving rook for first time
-        src = PIECE_ROOK | mycolor;
-
-    else if ((src & TYPE_MASK) == PIECE_KING) {
-        // castling
-        if (move.fromCol == 4 && (move.toCol == 6 || move.toCol == 2)) {
-            const bool kingSide = move.toCol == 6;
-            const u8 row = move.fromRow;
-            const u8 rookSourceCol = kingSide ? 7 : 0;
-            const u8 rookTargetCol = kingSide ? 5 : 3;
-
-            removePiece(rookSourceCol, row);
-            setPiece(PIECE_ROOK | mycolor, rookTargetCol, row);
-        } else // king moving, but not a castle
-        {
-            const u8 row = mycolor == PIECE_WHITE ? 0 : 7;
-            for (u8 col : {0, 7})
-                if (pieceAt(col, row) == (PIECE_CASTLE | mycolor))
-                    setPiece(PIECE_ROOK | mycolor, col, row);
-        }
-    }
-    // Do promotion
-    else if ((src & TYPE_MASK) == PIECE_PAWN) {
-        // double pawn move
-        if ((move.fromRow == 1 && move.toRow == 3) ||
-            (move.fromRow == 6 && move.toRow == 4)) {
-            m_bits |= DOUBLE_MASK;
-            m_bits &= (~PAWN_MASK);
-            m_bits |= (move.fromCol << 2);
-        }
-        // promotion
-        else if (move.promotion) {
-            src = (move.promotion & TYPE_MASK) | (src & COLOR_MASK);
-        }
-    } else {
-        m_bits &= (~(PAWN_MASK | DOUBLE_MASK));
-    }
-
-    if ((src & TYPE_MASK) == PIECE_PAWN || pieceAt(move.toCol, move.toRow) != EMPTY ||
-        isEnpassant) {
-        // Pawn move or capture - clear stale mask
-        m_bits &= (~STALE_MASK);
-    } else {
-        m_bits |= STALE_MASK;
-    }
-
-    setPiece(src, move.toCol, move.toRow);
-    removePiece(move.fromCol, move.fromRow);
-    if (isEnpassant)
-        removePiece(move.toCol, move.fromRow);
-
-    // Flip whose turn it is
-    m_bits ^= BLACKMOVE_MASK;
-}
-
 auto Board::hasZeroMoves() -> bool {
     auto moves = getMoves(1);
     return moves.empty();

@@ -50,10 +50,7 @@ struct Board {
     // Blanks out a piece at the specified position (set to 0).
     auto removePiece(u8 column, u8 row) -> void;
 
-    // Checks whether the move is legal. Sanity checks, checks whether the
-    // piece can move as desired, checks checkmate conditions, etc.
     auto isMoveLegal(const Move &move) -> bool;
-
     Undo MakeNewMove(const Move &move);
     void UndoMove(const Undo &undo);
 
@@ -109,11 +106,6 @@ struct Board {
     auto isStale() -> bool;
 
   protected:
-    // Board pieces.
-    // Each piece is stored in a u8, but actually only takes up 4 bits.
-    // Since a chess grid is 8x8, this means we can encode each row as 4
-    // bits x 8 bits = 32 bits - a single u32. So, m_pieces is 8 u32s, one
-    // for each row on the board.
     std::array<u8, GRID_LENGTH * GRID_LENGTH> m_pieces;
 
     // Board state bits.
@@ -125,9 +117,6 @@ struct Board {
     u8 m_bits = 0U;
 
     std::array<u8, 4> m_kingPos;
-
-    // Do a move without checking if it is legal, just do it.
-    auto forceDoMove(const Move &move) -> void;
 
     // Checks whether the specified column and row is within the confines of
     // the board.
