@@ -458,16 +458,33 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
                     moves.push_back(move);
             };
 
+            const auto walkRay = [&](int dc, int dr) {
+                if (dc == 0 && dr == 0)
+                    return;
+                int col = column + dc;
+                int rw = row + dr;
+                while (inBounds(col, rw)) {
+                    const auto piece = pieceAt(col, rw);
+                    if (piece != EMPTY && (piece & COLOR_MASK) == WhoseTurn())
+                        break; // blocked by own piece
+                    const auto move = Move{column, static_cast<u8>(col), row, static_cast<u8>(rw), 0};
+                    if (!isMoveIntoCheck(move))
+                        moves.push_back(move);
+                    if (piece != EMPTY)
+                        break; // capture, can't go any further
+                    col += dc;
+                    rw += dr;
+                }
+            };
+
             const u8 piece = pieceAt(column, row);
             if ((piece & COLOR_MASK) == mycolor) {
                 switch (piece & TYPE_MASK) {
                 case PIECE_BISHOP: {
                     // Check all diagonal vectors
-                    for (int c : {-1, 1})
-                        for (int r : {-1, 1})
-                            for (int col = column + c, rw = row + r;
-                                 inBounds(col, rw); col += c, rw += r)
-                                tryAddMove(col, rw);
+                    for (int dc : {-1, 1})
+                        for (int dr : {-1, 1})
+                            walkRay(dc, dr);
                     break;
                 }
                 case PIECE_KING: {
@@ -501,19 +518,8 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
                                 continue;
 
                             // Check for promotion
-                            const u8 newRow =
-                                (color == PIECE_WHITE) ? row + dr : row - dr;
-                            const bool isPromote =
-                                (newRow == GRID_LENGTH - 1) ||
-                                newRow == 0; // Black
-                                             // pawns
-                                             // can't ever
-                                             // get to
-                                             // rank 8 and
-                                             // white
-                                             // pawns
-                                             // can't get
-                                             // to rank 0
+                            const u8 newRow = (color == PIECE_WHITE) ? row + dr : row - dr;
+                            const bool isPromote = (newRow == GRID_LENGTH - 1) || newRow == 0;
                             if (isPromote) {
                                 for (u8 type : {PIECE_QUEEN, PIECE_KNIGHT, PIECE_ROOK, PIECE_BISHOP})
                                     tryAddMove(column + dc, newRow, type);
@@ -527,25 +533,22 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
                     // Queen, we need to check all diagnoal
                     // vectors + the horizontal and vertical
                     // axis
-                    for (int c : {-1, 0, 1})
-                        for (int r : {-1, 0, 1})
-                            if (c || r)
-                                for (int col = column + c, rw = row + r;
-                                     inBounds(col, rw); col += c, rw += r)
-                                    tryAddMove(col, rw);
+                    walkRay(-1, -1);
+                    walkRay(-1, 0);
+                    walkRay(-1, 1);
+                    walkRay(0, -1);
+                    walkRay(0, 1);
+                    walkRay(1, -1);
+                    walkRay(1, 0);
+                    walkRay(1, 1);
                     break;
                 }
                 case PIECE_ROOK:
                 case PIECE_CASTLE: {
-                    // Try horizontal and vertical vectors.
-                    for (int mult : {-1, 1}) {
-                        for (int col = column + mult; inBounds(col, row);
-                             col += mult)
-                            tryAddMove(col, row);
-                        for (int rw = row + mult; inBounds(column, rw);
-                             rw += mult)
-                            tryAddMove(column, rw);
-                    }
+                    walkRay(-1, 0);
+                    walkRay(1, 0);
+                    walkRay(0, -1);
+                    walkRay(0, 1);
                     break;
                 }
                 }
