@@ -1,6 +1,7 @@
 #include "Board.h"
 #include "Perft.h"
 #include "Player.h"
+#include "Types.h"
 #include "Viewer.h"
 #include <algorithm>
 #include <chrono>
@@ -15,12 +16,14 @@ using std::chrono::steady_clock;
 
 constexpr int PerftMaxDepth = 6;
 constexpr int ExpectedViewArguments = 2;
+constexpr int BenchGames = 100000;
 
 struct Args {
     bool isHelp;
     bool isPlayerList;
     bool isPerft;
     bool isHeadless;
+    bool isBench;
     std::vector<std::string> players;
 };
 
@@ -31,7 +34,7 @@ static Args parseArgs(int argc, char **argv) {
     args.isPlayerList = std::find(vec.begin(), vec.end(), "--players") != vec.end();
     args.isHeadless = std::find(vec.begin(), vec.end(), "--headless") != vec.end();
     args.isPerft = std::find(vec.begin(), vec.end(), "--perft") != vec.end();
-
+    args.isBench = std::find(vec.begin(), vec.end(), "--bench") != vec.end();
     std::copy_if(vec.begin(), vec.end(), std::back_inserter(args.players),
                  [argv](const auto &arg) { return arg != argv[0] && arg[0] != '-'; });
 
@@ -71,6 +74,35 @@ int main(int argc, char **argv) {
             auto t2 = steady_clock::now();
             std::cout << "Perft(" << i << "): " << result << " " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << "\n";
         }
+        return EXIT_SUCCESS;
+    }
+
+    if (args.isBench) {
+        auto t1 = steady_clock::now();
+        std::cout << "Running " << BenchGames << " games..." << std::endl;
+
+        for (int i = 0; i < BenchGames; i++) {
+            auto board = Board::Default();
+            auto stale = 0;
+
+            for (;;) {
+                const auto moves = board.getMoves(1);
+                if (moves.empty()) {
+                    break;
+                }
+                board.MakeNewMove(moves[0]);
+                if (board.IsStale()) {
+                    stale += 1;
+                } else {
+                    stale = 0;
+                }
+                if (board.getBoardState(stale) != STATE_NORMAL) {
+                    break;
+                }
+            }
+        }
+        auto t2 = steady_clock::now();
+        std::cout << "Done in " << duration_cast<milliseconds>(t2 - t1).count() << "ms" << "\n";
         return EXIT_SUCCESS;
     }
 

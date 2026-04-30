@@ -37,16 +37,18 @@ struct Board {
     Undo MakeNewMove(const Move &move);
     void UndoMove(const Undo &undo);
     auto getMoves(u8 count = 0) -> std::vector<Move>;
-    bool isLegal(const Move &move);
-    auto isCheck(u8 color) -> bool;
     auto isAttacked(u8 column, u8 row) const -> bool;
-    auto isAttacked(u8 column, u8 row, u8 piece) const -> bool;
     auto getBoardState(uint16_t staleHalfMoveClock) -> BoardState;
     auto canCastle(u8 color, bool queenSide) -> bool;
+
     inline u8 enPassantColumn() {
         if (!(m_bits & DOUBLE_MASK))
             return 0xFF;
         return (m_bits & PAWN_MASK) >> 2;
+    }
+
+    inline bool IsStale() {
+        return (m_bits & STALE_MASK) > 0;
     }
 
   private:
@@ -56,11 +58,13 @@ struct Board {
 
     auto setPiece(u8 piece, u8 column, u8 row) -> void;
     auto removePiece(u8 column, u8 row) -> void;
-
     auto isEnPassant(const Move &move) const -> bool;
     auto isStale() -> bool;
     auto isMoveIntoCheck(const Move &move) -> bool;
+    bool isLegal(const Move &move);
     auto isMoveLegalForPiece(u8 piece, const Move &move) -> bool;
+    auto isCheck(u8 color) -> bool;
+    auto isAttacked(u8 column, u8 row, u8 piece) const -> bool;
 };
 
 #endif
