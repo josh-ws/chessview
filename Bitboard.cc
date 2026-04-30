@@ -290,6 +290,11 @@ static bool IsAttacked(const Position &p, int sq, uint8_t bycolor)
             return true;
     }
 
+    auto king = Lsb(p.bitboards[theircolor][KING]);
+    auto targets = KING_ATTACKS[king];
+    if (targets & bitboard)
+        return true;
+
     return false;
 }
 
