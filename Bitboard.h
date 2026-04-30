@@ -21,6 +21,13 @@ enum PieceType : uint8_t {
     NONE,
 };
 
+enum Castling : uint8_t {
+    CR_WK = 1 << 0,
+    CR_WQ = 1 << 1,
+    CR_BK = 1 << 2,
+    CR_BQ = 1 << 3,
+};
+
 using Piece = uint8_t;
 
 inline constexpr Piece MakePiece(Color c, PieceType p) { return static_cast<Piece>((c << 3) | p); }
@@ -30,6 +37,7 @@ inline constexpr Color ColorOf(Piece p) { return static_cast<Color>(p >> 3); }
 enum MoveFlag : uint8_t {
     MV_EP = 1,
     MV_DOUBLE = 2,
+    MV_CASTLING = 4,
 };
 
 struct Move {
@@ -45,6 +53,7 @@ struct Position {
     uint64_t occupancy[2]{};
     Color whoseturn;
     uint8_t epsq;
+    uint8_t castling;
 };
 
 constexpr Position CreateDefaultPosition()
@@ -65,6 +74,7 @@ constexpr Position CreateDefaultPosition()
     p.occupancy[CWHITE] = p.bitboards[CWHITE][PAWN] | p.bitboards[CWHITE][KING] | p.bitboards[CWHITE][QUEEN] | p.bitboards[CWHITE][BISHOP] | p.bitboards[CWHITE][KNIGHT] | p.bitboards[CWHITE][ROOK];
     p.occupancy[CBLACK] = p.bitboards[CBLACK][PAWN] | p.bitboards[CBLACK][KING] | p.bitboards[CBLACK][QUEEN] | p.bitboards[CBLACK][BISHOP] | p.bitboards[CBLACK][KNIGHT] | p.bitboards[CBLACK][ROOK];
     p.epsq = NO_EP;
+    p.castling = CR_WK | CR_WQ | CR_BK | CR_BQ;
     return p;
 }
 

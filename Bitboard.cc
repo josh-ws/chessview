@@ -29,6 +29,7 @@ static constexpr uint64_t FILE_H = 0x8080808080808080ULL;
 static std::array<uint64_t, 64> KNIGHT_ATTACKS{};
 static std::array<uint64_t, 64> KING_ATTACKS{};
 static std::array<std::array<uint8_t, 64>, 8> FIRST_RANK_ATTACKS{};
+static std::array<uint8_t, 64> CASTLE_MASK;
 
 static std::array<uint64_t, 64> DIAG;
 static std::array<uint64_t, 64> ANTIDIAG;
@@ -114,12 +115,24 @@ static void InitKingAttacks()
     }
 }
 
+static void InitCastleMask()
+{
+    CASTLE_MASK.fill(0xFF);
+    CASTLE_MASK[4] = ~(CR_WK | CR_WQ);
+    CASTLE_MASK[7] = ~CR_WK;
+    CASTLE_MASK[0] = ~CR_WQ;
+    CASTLE_MASK[60] = ~(CR_BK | CR_BQ);
+    CASTLE_MASK[63] = ~CR_BK;
+    CASTLE_MASK[56] = ~CR_BQ;
+}
+
 void InitLookupTables()
 {
     InitFirstRankAttacks();
     InitKingAttacks();
     InitKnightAttacks();
     InitDiag();
+    InitCastleMask();
 }
 
 inline constexpr int Lsb(uint64_t b) { return std::countr_zero(b); }
@@ -172,6 +185,7 @@ void MakeMove(Position &p, const Move &m)
     const auto move = from ^ to;
 
     p.epsq = NO_EP;
+    p.castling &= CASTLE_MASK[m.from] & CASTLE_MASK[m.to];
     p.bitboards[mycolor][m.piece] ^= move;
     p.occupancy[mycolor] ^= move;
 
@@ -193,6 +207,26 @@ void MakeMove(Position &p, const Move &m)
         p.occupancy[theircolor] ^= to;
     }
 
+    if (m.flags & MV_CASTLING) {
+        auto rookMove = uint64_t(0);
+        switch (m.to) {
+        case 6:
+            rookMove = (1ULL << 7) | (1ULL << 5);
+            break;
+        case 2:
+            rookMove = (1ULL << 0) | (1ULL << 3);
+            break;
+        case 62:
+            rookMove = (1ULL << 63) | (1ULL << 61);
+            break;
+        case 58:
+            rookMove = (1ULL << 56) | (1ULL << 59);
+            break;
+        }
+        p.bitboards[mycolor][ROOK] ^= rookMove;
+        p.occupancy[mycolor] ^= rookMove;
+    }
+
     if (m.promo != NONE) {
         p.bitboards[mycolor][PAWN] ^= to;
         p.bitboards[mycolor][m.promo] ^= to;
@@ -201,11 +235,11 @@ void MakeMove(Position &p, const Move &m)
     p.whoseturn = theircolor;
 }
 
-static bool IsCheck(const Position &p, uint8_t color)
+static bool IsAttacked(const Position &p, int sq, uint8_t bycolor)
 {
-    const auto mycolor = color;
-    const auto theircolor = color ^ 1;
-    const auto bitboard = p.bitboards[mycolor][KING];
+    const auto mycolor = bycolor ^ 1;
+    const auto theircolor = bycolor;
+    const auto bitboard = 1ULL << sq;
     const auto all = p.occupancy[CWHITE] | p.occupancy[CBLACK];
 
     const auto pawns = p.bitboards[theircolor][PAWN];
@@ -259,6 +293,11 @@ static bool IsCheck(const Position &p, uint8_t color)
     return false;
 }
 
+static bool IsCheck(const Position &p, uint8_t color)
+{
+    return IsAttacked(p, Lsb(p.bitboards[color][KING]), color ^ 1);
+}
+
 static bool CheckLegal(Position &p, const Move &m)
 {
     const auto mycolor = p.whoseturn;
@@ -278,7 +317,7 @@ int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves)
 
     int index = 0;
 
-    const auto emit = [&](uint8_t from, uint8_t to, uint8_t piece, uint8_t flags = 0, uint8_t promo = 0) {
+    const auto emit = [&](uint8_t from, uint8_t to, uint8_t piece, uint8_t flags = 0, uint8_t promo = NONE) {
         moves[index].from = from;
         moves[index].to = to;
         moves[index].piece = piece;
@@ -396,6 +435,56 @@ int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves)
         auto targets = KING_ATTACKS[from] & ~p.occupancy[mycolor];
         while (targets)
             emit(from, PopLsb(targets), KING);
+    }
+
+    // castling
+    if (mycolor == CWHITE) {
+        if (p.castling & CR_WK) {
+            const auto empty = !(all & BitOf(5, 0)) && !(all & BitOf(6, 0));
+            auto attacked = false;
+            for (int i = 4; i <= 6; i++) {
+                if (IsAttacked(p, i, CBLACK))
+                    attacked = true;
+            }
+            if (empty && !attacked) {
+                emit(4, 6, KING, MV_CASTLING);
+            }
+        }
+        if (p.castling & CR_WQ) {
+            const auto empty = !(all & BitOf(3, 0)) && !(all & BitOf(2, 0)) && !(all & BitOf(1, 0));
+            auto attacked = false;
+            for (int i = 2; i <= 4; i++) {
+                if (IsAttacked(p, i, CBLACK))
+                    attacked = true;
+            }
+            if (empty && !attacked) {
+                emit(4, 2, KING, MV_CASTLING);
+            }
+        }
+    }
+    else {
+        if (p.castling & CR_BK) {
+            const auto empty = !(all & BitOf(5, 7)) && !(all & BitOf(6, 7));
+            auto attacked = false;
+            for (int i = 60; i <= 62; i++) {
+                if (IsAttacked(p, i, CWHITE))
+                    attacked = true;
+            }
+            if (empty && !attacked) {
+                emit(60, 62, KING, MV_CASTLING);
+            }
+        }
+        if (p.castling & CR_BQ) {
+            const auto empty = !(all & BitOf(3, 7)) && !(all & BitOf(2, 7)) && !(all & BitOf(1, 7));
+            auto attacked = false;
+            for (int i = 58; i <= 60; i++) {
+                if (IsAttacked(p, i, CWHITE))
+                    attacked = true;
+            }
+            if (empty && !attacked) {
+                emit(60, 58, KING, MV_CASTLING);
+            }
+        }
     }
 
     return index;
