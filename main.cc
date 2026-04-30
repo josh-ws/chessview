@@ -1,13 +1,16 @@
-#include "Board.h"
+#include "Bitboard.h"
+#include "FEN.h"
 #include "Perft.h"
 #include "Player.h"
 #include "Types.h"
 #include "Viewer.h"
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <iterator>
+#include <random>
 #include <string>
 
 using std::chrono::duration_cast;
@@ -53,6 +56,8 @@ static Args parseArgs(int argc, char **argv) {
 }
 
 int main(int argc, char **argv) {
+    InitLookupTables();
+
     const auto args = parseArgs(argc, argv);
 
     if (args.isHelp) {
@@ -68,7 +73,7 @@ int main(int argc, char **argv) {
 
     if (args.isPerft) {
         for (int i = 1; i <= PerftMaxDepth; i++) {
-            auto board = Board::Default();
+            auto board = CreateDefaultPosition();
             auto t1 = steady_clock::now();
             auto result = Perft(board, i);
             auto t2 = steady_clock::now();
@@ -81,24 +86,26 @@ int main(int argc, char **argv) {
         auto t1 = steady_clock::now();
         std::cout << "Running " << BenchGames << " games..." << std::endl;
 
-        for (int i = 0; i < BenchGames; i++) {
-            auto board = Board::Default();
+        std::array<Move, MAX_MOVES> moves;
+        std::mt19937 rng{std::random_device{}()};
+
+        for (int i = 0; i < 1; i++) {
+            auto board = CreateDefaultPosition();
             auto stale = 0;
 
-            for (;;) {
-                const auto moves = board.getMoves(1);
-                if (moves.empty()) {
+            for (int i = 0; i < 600; i++) {
+                const auto n = GenerateMoves(board, moves);
+                if (!n) {
                     break;
                 }
-                board.MakeNewMove(moves[0]);
-                if (board.IsStale()) {
-                    stale += 1;
-                } else {
-                    stale = 0;
-                }
-                if (board.getBoardState(stale) != STATE_NORMAL) {
-                    break;
-                }
+                std::cout << "moves: " << n << " " << ToFEN(board) << "\n";
+
+                std::uniform_int_distribution<int> dist(0, n - 1);
+                MakeMove(board, moves[dist(rng)]);
+
+                // if (board.getBoardState(stale) != STATE_NORMAL) {
+                //     break;
+                // }
             }
         }
         auto t2 = steady_clock::now();

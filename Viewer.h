@@ -11,6 +11,6 @@ struct ViewerOptions {
     std::vector<std::string> players;
 };
 
-void RunViewer(const ViewerOptions &options);
+inline void RunViewer(const ViewerOptions &options) {}
 
 #endif

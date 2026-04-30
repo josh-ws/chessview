@@ -1,18 +1,23 @@
 #include "Perft.h"
 
-std::uint64_t Perft(Board &board, int depth) {
+uint64_t Perft(Position &p, int depth) {
     if (depth <= 0)
         return 1;
 
-    const auto moves = board.getMoves();
-    if (depth == 1)
-        return moves.size();
+    std::array<Move, MAX_MOVES> moves;
+    int nmoves = GenerateMoves(p, moves);
 
-    std::uint64_t total = 0;
-    for (const auto &move : moves) {
-        const auto u = board.MakeNewMove(move);
-        total += Perft(board, depth - 1);
-        board.UndoMove(u);
+    if (depth == 1)
+        return nmoves;
+
+    auto t = std::uint64_t(0);
+
+#pragma omp parallel for reduction(+ : t) schedule(dynamic, 1)
+    for (int i = 0; i < nmoves; i++) {
+        Position np = p;
+        MakeMove(np, moves[i]);
+        t += Perft(np, depth - 1);
     }
-    return total;
+
+    return t;
 }
