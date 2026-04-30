@@ -19,7 +19,6 @@ enum PieceType : uint8_t {
     KNIGHT,
     ROOK,
     NONE,
-
 };
 
 using Piece = uint8_t;
@@ -38,6 +37,7 @@ struct Move {
     uint8_t to;
     uint8_t piece;
     uint8_t flags;
+    uint8_t promo = NONE;
 };
 
 struct Position {
@@ -47,7 +47,8 @@ struct Position {
     uint8_t epsq;
 };
 
-constexpr Position CreateDefaultPosition() {
+constexpr Position CreateDefaultPosition()
+{
     auto p = Position();
     p.bitboards[CWHITE][PAWN] = 0b00000000'00000000'00000000'00000000'00000000'00000000'11111111'00000000ULL;
     p.bitboards[CWHITE][KING] = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00010000ULL;

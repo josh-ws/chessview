@@ -193,6 +193,11 @@ void MakeMove(Position &p, const Move &m)
         p.occupancy[theircolor] ^= to;
     }
 
+    if (m.promo != NONE) {
+        p.bitboards[mycolor][PAWN] ^= to;
+        p.bitboards[mycolor][m.promo] ^= to;
+    }
+
     p.whoseturn = theircolor;
 }
 
@@ -269,14 +274,16 @@ int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves)
     const auto theircolor = p.whoseturn ^ CBLACK;
     const auto empty = ~(p.occupancy[CWHITE] | p.occupancy[CBLACK]);
     const auto all = p.occupancy[CWHITE] | p.occupancy[CBLACK];
+    const auto lastrank = (mycolor == CWHITE) ? RANK_8 : RANK_1;
 
     int index = 0;
 
-    const auto emit = [&](uint8_t from, uint8_t to, uint8_t piece, uint8_t flags = 0) {
+    const auto emit = [&](uint8_t from, uint8_t to, uint8_t piece, uint8_t flags = 0, uint8_t promo = 0) {
         moves[index].from = from;
         moves[index].to = to;
         moves[index].piece = piece;
         moves[index].flags = flags;
+        moves[index].promo = promo;
         if (CheckLegal(p, moves[index]))
             index += 1;
     };
@@ -288,26 +295,47 @@ int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves)
         }
     };
 
+    const auto doPromos = [&](uint64_t targets, int add) {
+        while (targets) {
+            auto to = PopLsb(targets);
+            for (auto pt : {QUEEN, ROOK, BISHOP, KNIGHT}) {
+                emit(to + add, to, PAWN, 0, pt);
+            }
+        }
+    };
+
     const auto pawns = p.bitboards[mycolor][PAWN];
     if (mycolor == CWHITE) {
-        auto single = (pawns << 8) & empty;                           // single pawn moves
-        auto dbl = ((single & RANK_3) << 8) & empty;                  // double pawn moves
-        auto capR = (pawns << 9) & ~FILE_A & p.occupancy[theircolor]; // captures (left)
-        auto capL = (pawns << 7) & ~FILE_H & p.occupancy[theircolor]; // captures (right)
-        doTargets(single, -8);
+        const auto single = (pawns << 8) & empty;                           // single pawn moves
+        const auto dbl = ((single & RANK_3) << 8) & empty;                  // double pawn moves
+        const auto capR = (pawns << 9) & ~FILE_A & p.occupancy[theircolor]; // captures (left)
+        const auto capL = (pawns << 7) & ~FILE_H & p.occupancy[theircolor]; // captures (right)
+
+        // quiet moves
         doTargets(dbl, -16, MV_DOUBLE);
-        doTargets(capR, -9);
-        doTargets(capL, -7);
+        doTargets(single & ~lastrank, -8);
+        doTargets(capR & ~lastrank, -9);
+        doTargets(capL & ~lastrank, -7);
+        // promotions
+        doPromos(single & lastrank, -8);
+        doPromos(capR & lastrank, -9);
+        doPromos(capL & lastrank, -7);
     }
     else {
         auto single = (pawns >> 8) & empty;                           // single pawn moves
         auto dbl = ((single & RANK_6) >> 8) & empty;                  // double pawn moves
         auto capR = (pawns >> 9) & ~FILE_H & p.occupancy[theircolor]; // captures (left)
         auto capL = (pawns >> 7) & ~FILE_A & p.occupancy[theircolor]; // captures (right)
-        doTargets(single, 8);
+
+        // quiet moves
         doTargets(dbl, 16, MV_DOUBLE);
-        doTargets(capR, 9);
-        doTargets(capL, 7);
+        doTargets(single & ~lastrank, 8);
+        doTargets(capR & ~lastrank, 9);
+        doTargets(capL & ~lastrank, 7);
+        // promotions
+        doPromos(single & lastrank, 8);
+        doPromos(capR & lastrank, 9);
+        doPromos(capL & lastrank, 7);
     }
 
     if (p.epsq != NO_EP) {
