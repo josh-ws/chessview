@@ -3,16 +3,12 @@
 #include <bit>
 #include <byteswap.h>
 #include <cassert>
-#include <chrono>
 #include <cstdint>
-#include <format>
-#include <iostream>
 
 inline constexpr uint64_t BitOf(uint8_t col, uint8_t row) { return 1ULL << (row * 8 + col); }
 inline constexpr int ColOf(int bit) { return bit & 7; }
 inline constexpr int RowOf(int bit) { return bit >> 3; }
 
-static constexpr int PERFT_DEPTH = 7;
 static constexpr uint64_t RANK_1 = 0x00000000000000FFULL;
 static constexpr uint64_t RANK_2 = 0x000000000000FF00ULL;
 static constexpr uint64_t RANK_3 = 0x0000000000FF0000ULL;
@@ -39,11 +35,13 @@ static std::array<uint64_t, 64> ANTIDIAG;
 static std::array<uint64_t, 8> RANKS = {RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8};
 static std::array<uint64_t, 8> FILES = {FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H};
 
-constexpr static bool OnBoard(int col, int row) {
+constexpr static bool OnBoard(int col, int row)
+{
     return col >= 0 && col < 8 && row >= 0 && row < 8;
 }
 
-static void InitFirstRankAttacks() {
+static void InitFirstRankAttacks()
+{
     for (int col = 0; col < 8; col++)
         for (int rocc = 0; rocc < 64; rocc++) {
             const auto occ = uint8_t(rocc) << 1;
@@ -62,7 +60,8 @@ static void InitFirstRankAttacks() {
         }
 }
 
-static void InitDiag() {
+static void InitDiag()
+{
     for (int i = 0; i < 64; i++) {
         const auto col = ColOf(i), row = RowOf(i);
         auto d = uint64_t(0);
@@ -81,7 +80,8 @@ static void InitDiag() {
     }
 }
 
-static void InitKnightAttacks() {
+static void InitKnightAttacks()
+{
     for (int i = 0; i < 64; i++) {
         uint64_t b = 1ULL << i;
         uint64_t a = 0;
@@ -97,7 +97,8 @@ static void InitKnightAttacks() {
     }
 }
 
-static void InitKingAttacks() {
+static void InitKingAttacks()
+{
     for (int i = 0; i < 64; i++) {
         uint64_t b = 1ULL << i;
         uint64_t a = 0;
@@ -113,7 +114,8 @@ static void InitKingAttacks() {
     }
 }
 
-void InitLookupTables() {
+void InitLookupTables()
+{
     InitFirstRankAttacks();
     InitKingAttacks();
     InitKnightAttacks();
@@ -121,51 +123,67 @@ void InitLookupTables() {
 }
 
 inline constexpr int Lsb(uint64_t b) { return std::countr_zero(b); }
-inline constexpr int PopLsb(uint64_t &b) {
+inline constexpr int PopLsb(uint64_t &b)
+{
     auto sq = std::countr_zero(b);
     b &= b - 1;
     return sq;
 }
 
-static uint64_t LineAttacks(uint64_t occ, uint64_t mask, uint64_t r) {
+static uint64_t LineAttacks(uint64_t occ, uint64_t mask, uint64_t r)
+{
     const auto o = occ & mask;
     const auto fwd = (o - 2 * r);
     const auto rev = std::byteswap(std::byteswap(o) - 2 * std::byteswap(r));
     return (fwd ^ rev) & mask;
 }
 
-static uint64_t RankAttacks(uint64_t sq, uint64_t occ) {
+static uint64_t RankAttacks(uint64_t sq, uint64_t occ)
+{
     const auto col = ColOf(sq);
     const auto row = RowOf(sq);
-    const auto rocc = (occ >> (row * 8)) & 0xFF; // full 8-bit occupancy for that rank
+    const auto rocc = (occ >> (row * 8 + 1)) & 0x3F; // full 8-bit occupancy for that rank
     return (uint64_t(FIRST_RANK_ATTACKS[col][rocc]) << (row * 8));
 }
 
-static uint64_t BishopAttacks(int sq, uint64_t occ) {
+static uint64_t BishopAttacks(int sq, uint64_t occ)
+{
     const auto r = 1ULL << sq;
     return LineAttacks(occ, DIAG[sq], r) | LineAttacks(occ, ANTIDIAG[sq], r);
 }
 
-static uint64_t RookAttacks(int sq, uint64_t occ) {
+static uint64_t RookAttacks(int sq, uint64_t occ)
+{
     const auto r = 1ULL << sq;
     return LineAttacks(occ, FILES[ColOf(sq)], r) | RankAttacks(sq, occ);
 }
 
-static uint64_t QueenAttacks(int sq, uint64_t occ) {
+static uint64_t QueenAttacks(int sq, uint64_t occ)
+{
     return BishopAttacks(sq, occ) | RookAttacks(sq, occ);
 }
 
-void MakeMove(Position &p, const Move &m) {
+void MakeMove(Position &p, const Move &m)
+{
     const auto mycolor = p.whoseturn;
     const auto theircolor = Color(mycolor ^ 1);
     const auto from = 1ULL << m.from;
     const auto to = 1ULL << m.to;
     const auto move = from ^ to;
 
+    p.epsq = NO_EP;
     p.bitboards[mycolor][m.piece] ^= move;
     p.occupancy[mycolor] ^= move;
 
-    if (p.occupancy[theircolor] & to) {
+    if (m.flags & MV_EP) {
+        const auto cap = (mycolor == CWHITE) ? (to >> 8) : (to << 8);
+        p.bitboards[theircolor][PAWN] ^= cap;
+        p.occupancy[theircolor] ^= cap;
+    }
+    else if (m.flags & MV_DOUBLE) {
+        p.epsq = (m.from + m.to) / 2;
+    }
+    else if (p.occupancy[theircolor] & to) {
         for (int pt = 0; pt < 6; pt++) {
             if (p.bitboards[theircolor][pt] & to) {
                 p.bitboards[theircolor][pt] ^= to;
@@ -178,7 +196,8 @@ void MakeMove(Position &p, const Move &m) {
     p.whoseturn = theircolor;
 }
 
-static bool IsCheck(const Position &p, uint8_t color) {
+static bool IsCheck(const Position &p, uint8_t color)
+{
     const auto mycolor = color;
     const auto theircolor = color ^ 1;
     const auto bitboard = p.bitboards[mycolor][KING];
@@ -191,7 +210,8 @@ static bool IsCheck(const Position &p, uint8_t color) {
         auto capL = (pawns >> 9) & ~FILE_H;
         if ((capR & bitboard) || (capL & bitboard))
             return true;
-    } else {
+    }
+    else {
         // enemy (white) pawns attack via <<7 and <<9
         auto capR = (pawns << 9) & ~FILE_A;
         auto capL = (pawns << 7) & ~FILE_H;
@@ -234,7 +254,8 @@ static bool IsCheck(const Position &p, uint8_t color) {
     return false;
 }
 
-static bool CheckLegal(Position &p, const Move &m) {
+static bool CheckLegal(Position &p, const Move &m)
+{
     const auto mycolor = p.whoseturn;
 
     auto newp = p;
@@ -242,7 +263,8 @@ static bool CheckLegal(Position &p, const Move &m) {
     return !IsCheck(newp, mycolor);
 }
 
-int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves) {
+int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves)
+{
     const auto mycolor = p.whoseturn;
     const auto theircolor = p.whoseturn ^ CBLACK;
     const auto empty = ~(p.occupancy[CWHITE] | p.occupancy[CBLACK]);
@@ -250,18 +272,19 @@ int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves) {
 
     int index = 0;
 
-    const auto emit = [&](int from, int to, uint8_t piece) {
-        moves[index].from = static_cast<uint8_t>(from & 0xFF);
-        moves[index].to = static_cast<uint8_t>(to & 0xFF);
+    const auto emit = [&](uint8_t from, uint8_t to, uint8_t piece, uint8_t flags = 0) {
+        moves[index].from = from;
+        moves[index].to = to;
         moves[index].piece = piece;
+        moves[index].flags = flags;
         if (CheckLegal(p, moves[index]))
             index += 1;
     };
 
-    const auto doTargets = [&](uint64_t targets, int add) {
+    const auto doTargets = [&](uint64_t targets, int add, uint8_t flags = 0) {
         while (targets) {
             auto to = PopLsb(targets);
-            emit(to + add, to, PAWN);
+            emit(to + add, to, PAWN, flags);
         }
     };
 
@@ -272,18 +295,39 @@ int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves) {
         auto capR = (pawns << 9) & ~FILE_A & p.occupancy[theircolor]; // captures (left)
         auto capL = (pawns << 7) & ~FILE_H & p.occupancy[theircolor]; // captures (right)
         doTargets(single, -8);
-        doTargets(dbl, -16);
+        doTargets(dbl, -16, MV_DOUBLE);
         doTargets(capR, -9);
         doTargets(capL, -7);
-    } else {
+    }
+    else {
         auto single = (pawns >> 8) & empty;                           // single pawn moves
         auto dbl = ((single & RANK_6) >> 8) & empty;                  // double pawn moves
         auto capR = (pawns >> 9) & ~FILE_H & p.occupancy[theircolor]; // captures (left)
         auto capL = (pawns >> 7) & ~FILE_A & p.occupancy[theircolor]; // captures (right)
         doTargets(single, 8);
-        doTargets(dbl, 16);
+        doTargets(dbl, 16, MV_DOUBLE);
         doTargets(capR, 9);
         doTargets(capL, 7);
+    }
+
+    if (p.epsq != NO_EP) {
+        const uint64_t b = 1ULL << p.epsq;
+        if (mycolor == CWHITE) {
+            auto epR = (pawns << 9) & ~FILE_A & b;
+            auto epL = (pawns << 7) & ~FILE_H & b;
+            if (epR)
+                emit(p.epsq - 9, p.epsq, PAWN, MV_EP);
+            if (epL)
+                emit(p.epsq - 7, p.epsq, PAWN, MV_EP);
+        }
+        else {
+            auto epR = (pawns >> 9) & ~FILE_H & b;
+            auto epL = (pawns >> 7) & ~FILE_A & b;
+            if (epR)
+                emit(p.epsq + 9, p.epsq, PAWN, MV_EP);
+            if (epL)
+                emit(p.epsq + 7, p.epsq, PAWN, MV_EP);
+        }
     }
 
     auto knights = p.bitboards[mycolor][KNIGHT];

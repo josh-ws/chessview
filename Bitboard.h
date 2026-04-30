@@ -4,6 +4,7 @@
 #include <cstdint>
 
 static constexpr int MAX_MOVES = 218; // https://chess.stackexchange.com/questions/4490/maximum-possible-movement-in-a-turn
+static constexpr int NO_EP = 64;
 
 enum Color : uint8_t {
     CWHITE,
@@ -27,16 +28,23 @@ inline constexpr Piece MakePiece(Color c, PieceType p) { return static_cast<Piec
 inline constexpr PieceType TypeOf(Piece p) { return static_cast<PieceType>(p & 7); }
 inline constexpr Color ColorOf(Piece p) { return static_cast<Color>(p >> 3); }
 
+enum MoveFlag : uint8_t {
+    MV_EP = 1,
+    MV_DOUBLE = 2,
+};
+
 struct Move {
     uint8_t from;
     uint8_t to;
     uint8_t piece;
+    uint8_t flags;
 };
 
 struct Position {
     uint64_t bitboards[2][6]{};
     uint64_t occupancy[2]{};
     Color whoseturn;
+    uint8_t epsq;
 };
 
 constexpr Position CreateDefaultPosition() {
@@ -55,6 +63,7 @@ constexpr Position CreateDefaultPosition() {
     p.bitboards[CBLACK][ROOK] = 0b10000001'00000000'00000000'00000000'00000000'00000000'00000000'00000000ULL;
     p.occupancy[CWHITE] = p.bitboards[CWHITE][PAWN] | p.bitboards[CWHITE][KING] | p.bitboards[CWHITE][QUEEN] | p.bitboards[CWHITE][BISHOP] | p.bitboards[CWHITE][KNIGHT] | p.bitboards[CWHITE][ROOK];
     p.occupancy[CBLACK] = p.bitboards[CBLACK][PAWN] | p.bitboards[CBLACK][KING] | p.bitboards[CBLACK][QUEEN] | p.bitboards[CBLACK][BISHOP] | p.bitboards[CBLACK][KNIGHT] | p.bitboards[CBLACK][ROOK];
+    p.epsq = NO_EP;
     return p;
 }
 
