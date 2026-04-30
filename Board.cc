@@ -10,18 +10,35 @@ constexpr int Index(int col, int row) {
     return col * GRID_LENGTH + row;
 }
 
+Board Board::Default() {
+    auto b = Board();
+
+    // Pawns
+    for (int row : {1, 6})
+        for (int column = 0; column < 8; ++column) {
+            u8 color = row == 1 ? PIECE_WHITE : PIECE_BLACK;
+            b.setPiece(PIECE_PAWN | color, column, row);
+        }
+
+    for (int row : {0, 7}) {
+        u8 color = row == 0 ? PIECE_WHITE : PIECE_BLACK;
+        b.setPiece(PIECE_QUEEN | color, 3, row);
+        b.setPiece(PIECE_KING | color, 4, row);
+        for (int columnMultiplier : {0, 1}) {
+            b.setPiece(PIECE_BISHOP | color, 2 + (3 * columnMultiplier), row);
+            b.setPiece(PIECE_KNIGHT | color, 1 + (5 * columnMultiplier), row);
+            b.setPiece(PIECE_CASTLE | color, 0 + (7 * columnMultiplier), row);
+        }
+    }
+    return b;
+}
+
 Board::Board() : m_pieces{}, m_kingPos() {}
 
 Board::Board(const Board &other) : m_pieces{}, m_kingPos() {
     m_pieces = other.m_pieces;
     m_bits = other.m_bits;
     m_kingPos = other.m_kingPos;
-}
-
-auto Board::reset() -> void {
-    m_pieces.fill(0);
-    m_bits = 0;
-    m_kingPos.fill(0);
 }
 
 auto Board::pieceAt(u8 column, u8 row) const -> u8 {
@@ -46,9 +63,8 @@ auto Board::removePiece(u8 column, u8 row) -> void {
     m_pieces[Index(column, row)] = EMPTY;
 }
 
-auto Board::isMoveLegal(const Move &move) -> bool {
-    // Whose turn is it?
-    const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
+bool Board::isLegal(const Move &move) {
+    const u8 mycolor = WhoseTurn();
 
     // Move not in bounds, so is immediately illegal
     if (!IsInBounds(move.fromCol, move.fromRow) || !IsInBounds(move.toCol, move.toRow))
@@ -79,30 +95,6 @@ auto Board::isMoveLegal(const Move &move) -> bool {
         return false;
 
     return isMoveLegalForPiece(piece, move) && !isMoveIntoCheck(move);
-}
-
-auto Board::isEnPassant(const Move &move) const -> bool {
-    if (!(m_bits & DOUBLE_MASK))
-        return false;
-
-    const u8 column = (m_bits & PAWN_MASK) >> 2;
-    const u8 piece = pieceAt(move.fromCol, move.fromRow);
-
-    // Moving piece must be a pawn
-    if ((piece & TYPE_MASK) != PIECE_PAWN)
-        return false;
-
-    // Must be trying to take on the same column as the last move
-    if (move.toCol != column)
-        return false;
-
-    switch (piece & COLOR_MASK) {
-    case PIECE_BLACK:
-        return move.fromRow == 3 && move.toRow == 2;
-    case PIECE_WHITE:
-        return move.fromRow == 4 && move.toRow == 5;
-    }
-    return false; // to stop warnings, but this should never be hit
 }
 
 auto Board::isMoveLegalForPiece(u8 piece, const Move &move) -> bool {
@@ -274,6 +266,30 @@ auto Board::isMoveLegalForPiece(u8 piece, const Move &move) -> bool {
     }
 }
 
+auto Board::isEnPassant(const Move &move) const -> bool {
+    if (!(m_bits & DOUBLE_MASK))
+        return false;
+
+    const u8 column = (m_bits & PAWN_MASK) >> 2;
+    const u8 piece = pieceAt(move.fromCol, move.fromRow);
+
+    // Moving piece must be a pawn
+    if ((piece & TYPE_MASK) != PIECE_PAWN)
+        return false;
+
+    // Must be trying to take on the same column as the last move
+    if (move.toCol != column)
+        return false;
+
+    switch (piece & COLOR_MASK) {
+    case PIECE_BLACK:
+        return move.fromRow == 3 && move.toRow == 2;
+    case PIECE_WHITE:
+        return move.fromRow == 4 && move.toRow == 5;
+    }
+    return false; // to stop warnings, but this should never be hit
+}
+
 auto Board::isMoveIntoCheck(const Move &move) -> bool {
     const auto mycolor = WhoseTurn();
     const auto u = MakeNewMove(move);
@@ -283,11 +299,9 @@ auto Board::isMoveIntoCheck(const Move &move) -> bool {
 }
 
 auto Board::getBoardState(uint16_t staleHalfMoveClock) -> BoardState {
-    const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
+    const u8 mycolor = WhoseTurn();
     // zero moves
-    if (hasZeroMoves()) {
-        // if zero moves and in check, that's checkmate - otherwise
-        // stalemate
+    if (getMoves(1).empty()) {
         return isCheck(mycolor) ? STATE_CHECKMATE : STATE_STALEMATE;
     }
     // 50 moves without capture or pawn move (we compare with 100 because
@@ -332,18 +346,9 @@ auto Board::getBoardState(uint16_t staleHalfMoveClock) -> BoardState {
     return STATE_NORMAL;
 }
 
-auto Board::hasZeroMoves() -> bool {
-    auto moves = getMoves(1);
-    return moves.empty();
-}
-
-auto Board::hasOneMove() -> bool {
-    auto moves = getMoves(2);
-    return moves.size() == 1;
-}
-
 auto Board::getMoves(u8 count) -> std::vector<Move> {
-    const u8 mycolor = whiteMove() ? PIECE_WHITE : PIECE_BLACK;
+    const u8 mycolor = WhoseTurn();
+
     std::vector<Move> moves;
     moves.reserve(64);
 
@@ -356,7 +361,7 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
             auto tryAddMove = [&column, &row, &moves, this](u8 toCol, u8 toRow,
                                                             u8 promote = 0U) {
                 const Move move{column, toCol, row, toRow, promote};
-                if (isMoveLegal(move))
+                if (isLegal(move))
                     moves.push_back(move);
             };
 
@@ -466,12 +471,6 @@ auto Board::getMoves(u8 count) -> std::vector<Move> {
 auto Board::isCheck(u8 color) -> bool {
     const u8 idx = (color >> 3) * 2;
     return isAttacked(m_kingPos[idx], m_kingPos[idx + 1], PIECE_KING | color);
-}
-
-auto Board::whiteMove() const -> bool { return !(m_bits & BLACKMOVE_MASK); }
-
-auto Board::enPassantColumn() const -> u8 {
-    return (m_bits & DOUBLE_MASK) ? (m_bits & PAWN_MASK) >> 2 : UINT8_MAX;
 }
 
 auto Board::canCastle(u8 color, bool queenSide) -> bool {

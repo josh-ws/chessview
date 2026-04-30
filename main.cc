@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
 
     if (args.isPerft) {
         for (int i = 1; i <= PerftMaxDepth; i++) {
-            auto board = CreateDefaultBoard();
+            auto board = Board::Default();
             auto t1 = steady_clock::now();
             auto result = Perft(board, i);
             auto t2 = steady_clock::now();

@@ -67,7 +67,7 @@ struct Viewer {
 
     Viewer(ViewerOptions v)
         : options(std::move(v)),
-          board(CreateDefaultBoard()),
+          board(Board::Default()),
           transition(),
           lastMove(std::nullopt),
           players(),
@@ -95,7 +95,7 @@ struct Viewer {
     void DoNextMove() {
         if (transition.active)
             return;
-        const auto idx = board.whiteMove() ? 0 : 1;
+        const auto idx = board.WhoseTurn() == PIECE_WHITE ? 0 : 1;
         const auto move = players[idx].GetMove(board);
         const auto captured = board.pieceAt(move.toCol, move.toRow);
         board.MakeNewMove(move);

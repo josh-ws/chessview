@@ -1,4 +1,5 @@
 #include "FEN.h"
+#include "Types.h"
 
 namespace FEN {
 static auto getCastleString(Board *board) -> std::string {
@@ -23,7 +24,7 @@ static auto getEnPassantString(Board *board) -> std::string {
     // not be a piece available to capture)
     std::string s;
     s.push_back('a' + column);
-    s.push_back(board->whiteMove() ? '6' : '3');
+    s.push_back(board->WhoseTurn() == PIECE_WHITE ? '6' : '3');
     return s;
 }
 
@@ -72,7 +73,7 @@ auto toFEN(Board *board, u16 halfMoveStaleClock, u16 fullMoveclock)
         flush();
         oss << (row ? "/" : " ");
     }
-    oss << (board->whiteMove() ? "w " : "b ");
+    oss << (board->WhoseTurn() == PIECE_WHITE ? "w " : "b ");
     oss << getCastleString(board) << ' ' << getEnPassantString(board) << ' '
         << halfMoveStaleClock << ' ' << fullMoveclock;
     return oss.str();
