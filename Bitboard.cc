@@ -103,13 +103,13 @@ static void InitKingAttacks()
         uint64_t b = 1ULL << i;
         uint64_t a = 0;
         a |= (b & ~FILE_H) << 1;
-        a |= (b & ~FILE_H) << 7;
+        a |= (b & ~FILE_A) << 7;
         a |= b << 8;
-        a |= (b & ~FILE_A) << 9;
+        a |= (b & ~FILE_H) << 9;
         a |= (b & ~FILE_A) >> 1;
-        a |= (b & ~FILE_A) >> 7;
+        a |= (b & ~FILE_H) >> 7;
         a |= b >> 8;
-        a |= (b & ~FILE_H) >> 9;
+        a |= (b & ~FILE_A) >> 9;
         KING_ATTACKS[i] = a;
     }
 }
