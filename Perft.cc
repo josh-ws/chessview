@@ -1,4 +1,5 @@
 #include "Perft.h"
+#include "Bitboard.h"
 
 uint64_t Perft(Position &p, int depth) {
     if (depth <= 0)
@@ -12,11 +13,10 @@ uint64_t Perft(Position &p, int depth) {
 
     auto t = std::uint64_t(0);
 
-#pragma omp parallel for reduction(+ : t) schedule(dynamic, 1)
     for (int i = 0; i < nmoves; i++) {
-        Position np = p;
-        MakeMove(np, moves[i]);
-        t += Perft(np, depth - 1);
+        const auto u = MakeMove(p, moves[i]);
+        t += Perft(p, depth - 1);
+        UndoMove(p, moves[i], u);
     }
 
     return t;

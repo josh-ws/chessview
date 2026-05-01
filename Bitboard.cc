@@ -176,8 +176,25 @@ static uint64_t QueenAttacks(int sq, uint64_t occ)
     return BishopAttacks(sq, occ) | RookAttacks(sq, occ);
 }
 
-void MakeMove(Position &p, const Move &m)
+static uint64_t CastlingRookMove(uint8_t kingTo)
 {
+    switch (kingTo) {
+    case 6:
+        return (1ULL << 7) | (1ULL << 5);
+    case 2:
+        return (1ULL << 0) | (1ULL << 3);
+    case 62:
+        return (1ULL << 63) | (1ULL << 61);
+    case 58:
+        return (1ULL << 56) | (1ULL << 59);
+    }
+    return 0;
+}
+
+Undo MakeMove(Position &p, const Move &m)
+{
+    Undo u{p.castling, p.epsq, NONE};
+
     const auto mycolor = p.whoseturn;
     const auto theircolor = Color(mycolor ^ 1);
     const auto from = 1ULL << m.from;
@@ -193,6 +210,7 @@ void MakeMove(Position &p, const Move &m)
         const auto cap = (mycolor == CWHITE) ? (to >> 8) : (to << 8);
         p.bitboards[theircolor][PAWN] ^= cap;
         p.occupancy[theircolor] ^= cap;
+        u.captured = PAWN;
     }
     else if (m.flags & MV_DOUBLE) {
         p.epsq = (m.from + m.to) / 2;
@@ -201,6 +219,7 @@ void MakeMove(Position &p, const Move &m)
         for (int pt = 0; pt < 6; pt++) {
             if (p.bitboards[theircolor][pt] & to) {
                 p.bitboards[theircolor][pt] ^= to;
+                u.captured = PieceType(pt);
                 break;
             }
         }
@@ -208,21 +227,7 @@ void MakeMove(Position &p, const Move &m)
     }
 
     if (m.flags & MV_CASTLING) {
-        auto rookMove = uint64_t(0);
-        switch (m.to) {
-        case 6:
-            rookMove = (1ULL << 7) | (1ULL << 5);
-            break;
-        case 2:
-            rookMove = (1ULL << 0) | (1ULL << 3);
-            break;
-        case 62:
-            rookMove = (1ULL << 63) | (1ULL << 61);
-            break;
-        case 58:
-            rookMove = (1ULL << 56) | (1ULL << 59);
-            break;
-        }
+        auto rookMove = CastlingRookMove(m.to);
         p.bitboards[mycolor][ROOK] ^= rookMove;
         p.occupancy[mycolor] ^= rookMove;
     }
@@ -233,6 +238,44 @@ void MakeMove(Position &p, const Move &m)
     }
 
     p.whoseturn = theircolor;
+    return u;
+}
+
+void UndoMove(Position &p, const Move &m, const Undo &u)
+{
+    p.whoseturn = Color(p.whoseturn ^ 1);
+    const auto mycolor = p.whoseturn;
+    const auto theircolor = Color(mycolor ^ 1);
+    const auto from = 1ULL << m.from;
+    const auto to = 1ULL << m.to;
+    const auto move = from ^ to;
+
+    if (m.promo != NONE) {
+        p.bitboards[mycolor][m.promo] ^= to;
+        p.bitboards[mycolor][PAWN] ^= to;
+    }
+
+    p.bitboards[mycolor][m.piece] ^= move;
+    p.occupancy[mycolor] ^= move;
+
+    if (m.flags & MV_CASTLING) {
+        const auto rookMove = CastlingRookMove(m.to);
+        p.bitboards[mycolor][ROOK] ^= rookMove;
+        p.occupancy[mycolor] ^= rookMove;
+    }
+
+    if (m.flags & MV_EP) {
+        const auto cap = (mycolor == CWHITE) ? (to >> 8) : (to << 8);
+        p.bitboards[theircolor][PAWN] ^= cap;
+        p.occupancy[theircolor] ^= cap;
+    }
+    else if (u.captured != NONE) {
+        p.bitboards[theircolor][u.captured] ^= to;
+        p.occupancy[theircolor] ^= to;
+    }
+
+    p.castling = u.castling;
+    p.epsq = u.epsq;
 }
 
 static bool IsAttacked(const Position &p, int sq, uint8_t bycolor)
@@ -258,41 +301,17 @@ static bool IsAttacked(const Position &p, int sq, uint8_t bycolor)
             return true;
     }
 
-    auto knights = p.bitboards[theircolor][KNIGHT];
-    while (knights) {
-        auto from = PopLsb(knights);
-        auto targets = KNIGHT_ATTACKS[from];
-        if (targets & bitboard)
-            return true;
-    }
+    const auto theirBishops = p.bitboards[theircolor][BISHOP];
+    const auto theirRooks = p.bitboards[theircolor][ROOK];
+    const auto theirQueens = p.bitboards[theircolor][QUEEN];
 
-    auto bishops = p.bitboards[theircolor][BISHOP];
-    while (bishops) {
-        auto from = PopLsb(bishops);
-        auto targets = BishopAttacks(from, all);
-        if (targets & bitboard)
-            return true;
-    }
-
-    auto rooks = p.bitboards[theircolor][ROOK];
-    while (rooks) {
-        auto from = PopLsb(rooks);
-        auto targets = RookAttacks(from, all);
-        if (targets & bitboard)
-            return true;
-    }
-
-    auto queens = p.bitboards[theircolor][QUEEN];
-    while (queens) {
-        auto from = PopLsb(queens);
-        auto targets = QueenAttacks(from, all);
-        if (targets & bitboard)
-            return true;
-    }
-
-    auto king = Lsb(p.bitboards[theircolor][KING]);
-    auto targets = KING_ATTACKS[king];
-    if (targets & bitboard)
+    if (KNIGHT_ATTACKS[sq] & p.bitboards[theircolor][KNIGHT])
+        return true;
+    if (KING_ATTACKS[sq] & p.bitboards[theircolor][KING])
+        return true;
+    if (BishopAttacks(sq, all) & (theirBishops | theirQueens))
+        return true;
+    if (RookAttacks(sq, all) & (theirRooks | theirQueens))
         return true;
 
     return false;
@@ -307,9 +326,10 @@ static bool CheckLegal(Position &p, const Move &m)
 {
     const auto mycolor = p.whoseturn;
 
-    auto newp = p;
-    MakeMove(newp, m);
-    return !IsCheck(newp, mycolor);
+    const auto undo = MakeMove(p, m);
+    const auto isCheck = IsCheck(p, mycolor);
+    UndoMove(p, m, undo);
+    return !isCheck;
 }
 
 int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves)

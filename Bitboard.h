@@ -48,6 +48,12 @@ struct Move {
     uint8_t promo = NONE;
 };
 
+struct Undo {
+    uint8_t castling;
+    uint8_t epsq;
+    uint8_t captured; // PieceType (NONE if no capture)
+};
+
 struct Position {
     uint64_t bitboards[2][6]{};
     uint64_t occupancy[2]{};
@@ -56,8 +62,7 @@ struct Position {
     uint8_t castling;
 };
 
-constexpr Position CreateDefaultPosition()
-{
+constexpr Position CreateDefaultPosition() {
     auto p = Position();
     p.bitboards[CWHITE][PAWN] = 0b00000000'00000000'00000000'00000000'00000000'00000000'11111111'00000000ULL;
     p.bitboards[CWHITE][KING] = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00010000ULL;
@@ -80,4 +85,6 @@ constexpr Position CreateDefaultPosition()
 
 void InitLookupTables();
 int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves);
-void MakeMove(Position &p, const Move &m);
+
+Undo MakeMove(Position &p, const Move &m);
+void UndoMove(Position &p, const Move &m, const Undo &u);
