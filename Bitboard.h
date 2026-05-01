@@ -6,7 +6,10 @@
 static constexpr int MAX_MOVES = 218; // https://chess.stackexchange.com/questions/4490/maximum-possible-movement-in-a-turn
 static constexpr int NO_EP = 64;
 
-enum Color : uint8_t {
+inline constexpr int ColOf(int bit) { return bit & 7; }
+inline constexpr int RowOf(int bit) { return bit >> 3; }
+
+enum CColor : uint8_t {
     CWHITE,
     CBLACK,
 };
@@ -30,9 +33,9 @@ enum Castling : uint8_t {
 
 using Piece = uint8_t;
 
-inline constexpr Piece MakePiece(Color c, PieceType p) { return static_cast<Piece>((c << 3) | p); }
+inline constexpr Piece MakePiece(CColor c, PieceType p) { return static_cast<Piece>((c << 3) | p); }
 inline constexpr PieceType TypeOf(Piece p) { return static_cast<PieceType>(p & 7); }
-inline constexpr Color ColorOf(Piece p) { return static_cast<Color>(p >> 3); }
+inline constexpr CColor ColorOf(Piece p) { return static_cast<CColor>(p >> 3); }
 
 enum MoveFlag : uint8_t {
     MV_EP = 1,
@@ -57,12 +60,13 @@ struct Undo {
 struct Position {
     uint64_t bitboards[2][6]{};
     uint64_t occupancy[2]{};
-    Color whoseturn;
+    CColor whoseturn;
     uint8_t epsq;
     uint8_t castling;
 };
 
-constexpr Position CreateDefaultPosition() {
+constexpr Position CreateDefaultPosition()
+{
     auto p = Position();
     p.bitboards[CWHITE][PAWN] = 0b00000000'00000000'00000000'00000000'00000000'00000000'11111111'00000000ULL;
     p.bitboards[CWHITE][KING] = 0b00000000'00000000'00000000'00000000'00000000'00000000'00000000'00010000ULL;
@@ -84,7 +88,8 @@ constexpr Position CreateDefaultPosition() {
 }
 
 void InitLookupTables();
-int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves);
 
+Piece GetPiece(const Position &p, int col, int row);
+int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves);
 Undo MakeMove(Position &p, const Move &m);
 void UndoMove(Position &p, const Move &m, const Undo &u);

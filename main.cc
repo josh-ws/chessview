@@ -132,7 +132,7 @@ void Watch(const Args &opt)
         .title = "chessview",
         .width = 480,
         .height = 480,
-        .players = opt.players,
+        .players = {"random", "random"},
     };
     RunViewer(viewOptions);
 }

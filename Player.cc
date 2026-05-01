@@ -1,15 +1,18 @@
 #include "Player.h"
+#include "Bitboard.h"
+#include "Types.h"
 #include <stdexcept>
 #include <vector>
 
-// static int TileEval(const Position &p, std::function<int(int, int)> eval) {
-//     auto score = 0;
-//     for (int col = 0; col < GRID_LENGTH; col++)
-//         for (int row = 0; row < GRID_LENGTH; row++)
-//             if (board.pieceAt(col, row) != EMPTY)
-//                 score += eval(col, row);
-//     return score;
-// }
+static int TileEval(const Position &p, std::function<int(int, int)> eval)
+{
+    auto score = 0;
+    for (int col = 0; col < GRID_LENGTH; col++)
+        for (int row = 0; row < GRID_LENGTH; row++)
+            if (GetPiece(p, col, row) != NONE)
+                score += eval(col, row);
+    return score;
+}
 
 const static std::vector<Player> players = {
     Player{
@@ -20,8 +23,8 @@ const static std::vector<Player> players = {
     // Player{
     //     .name = "whitesquares",
     //     .description = "Plays moves that land pieces on white tiles",
-    //     .evaluation = [](const Position &p, const Move &) {
-    //         return TileEval(board, [&](int col, int row) {
+    //     .evaluation = [](Position &p, const Move &) {
+    //         return TileEval(p, [&](int col, int row) {
     //             return board.colorAt(col, row) == PIECE_WHITE;
     //         });
     //     },
@@ -175,7 +178,8 @@ const static std::vector<Player> players = {
     //                 if (piece != EMPTY) {
     //                     if ((piece & COLOR_MASK) == PIECE_WHITE) {
     //                         sum += bonus[row];
-    //                     } else {
+    //                     }
+    //                     else {
     //                         sum += -bonus[row];
     //                     }
     //                 }
@@ -195,7 +199,8 @@ const static std::vector<Player> players = {
     //                 if (piece != EMPTY) {
     //                     if ((piece & COLOR_MASK) == PIECE_WHITE) {
     //                         sum += -bonus[row];
-    //                     } else {
+    //                     }
+    //                     else {
     //                         sum += bonus[row];
     //                     }
     //                 }
@@ -206,14 +211,16 @@ const static std::vector<Player> players = {
 
 std::vector<Player> GetPlayerList() { return players; }
 
-bool IsValidPlayer(const std::string &name) {
+bool IsValidPlayer(const std::string &name)
+{
     for (const auto &player : players)
         if (player.name == name)
             return true;
     return false;
 }
 
-Player MakePlayer(const std::string &name) {
+Player MakePlayer(const std::string &name)
+{
     for (const auto &player : players)
         if (player.name == name)
             return player;

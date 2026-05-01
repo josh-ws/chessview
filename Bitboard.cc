@@ -4,10 +4,9 @@
 #include <byteswap.h>
 #include <cassert>
 #include <cstdint>
+#include <raylib.h>
 
 inline constexpr uint64_t BitOf(uint8_t col, uint8_t row) { return 1ULL << (row * 8 + col); }
-inline constexpr int ColOf(int bit) { return bit & 7; }
-inline constexpr int RowOf(int bit) { return bit >> 3; }
 
 static constexpr uint64_t RANK_1 = 0x00000000000000FFULL;
 static constexpr uint64_t RANK_2 = 0x000000000000FF00ULL;
@@ -191,12 +190,25 @@ static uint64_t CastlingRookMove(uint8_t kingTo)
     return 0;
 }
 
+Piece GetPiece(const Position &p, int col, int row)
+{
+    const auto bit = BitOf(col, row);
+
+    for (const auto color : {CBLACK, CWHITE})
+        for (const auto piece : {PAWN, KING, QUEEN, BISHOP, KNIGHT, ROOK}) {
+            if (p.bitboards[color][piece] & bit) {
+                return MakePiece(color, piece);
+            }
+        }
+    return NONE;
+}
+
 Undo MakeMove(Position &p, const Move &m)
 {
     Undo u{p.castling, p.epsq, NONE};
 
     const auto mycolor = p.whoseturn;
-    const auto theircolor = Color(mycolor ^ 1);
+    const auto theircolor = CColor(mycolor ^ 1);
     const auto from = 1ULL << m.from;
     const auto to = 1ULL << m.to;
     const auto move = from ^ to;
@@ -243,9 +255,9 @@ Undo MakeMove(Position &p, const Move &m)
 
 void UndoMove(Position &p, const Move &m, const Undo &u)
 {
-    p.whoseturn = Color(p.whoseturn ^ 1);
+    p.whoseturn = CColor(p.whoseturn ^ 1);
     const auto mycolor = p.whoseturn;
-    const auto theircolor = Color(mycolor ^ 1);
+    const auto theircolor = CColor(mycolor ^ 1);
     const auto from = 1ULL << m.from;
     const auto to = 1ULL << m.to;
     const auto move = from ^ to;
