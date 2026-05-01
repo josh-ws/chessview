@@ -138,7 +138,7 @@ struct Viewer {
         for (int col = 0; col < GRID_LENGTH; col++) {
             for (int row = 0; row < GRID_LENGTH; row++) {
                 const auto piece = GetPiece(position, col, row);
-                if (transition.active && ColOf(transition.move.from) == col && RowOf(transition.move.from) == row)
+                if (transition.active && ColOf(transition.move.to) == col && RowOf(transition.move.to) == row)
                     continue;
                 if (piece == NONE)
                     continue;
@@ -157,7 +157,7 @@ struct Viewer {
         const auto toX = ColOf(transition.move.to) * TileSize();
         const auto toY = RowOf(transition.move.to) * TileSize();
 
-        const auto piece = GetPiece(position, ColOf(transition.move.from), RowOf(transition.move.from));
+        const auto piece = GetPiece(position, ColOf(transition.move.to), RowOf(transition.move.to));
         if (piece == NONE)
             return;
         const auto texture = pieceTextures.at(piece);
