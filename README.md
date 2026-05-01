@@ -20,28 +20,54 @@ Then run `make` in the root directory. It will generate a `chess` binary.
 
 ### Command line
 
+#### Bench
+
+Bench runs a benchmark against 100,000 random games and reports the elapsed time.
+
+```
+$ chessview bench
+Running 100000 games...
+Done in 2968ms
+```
+
 #### Perft
 
 Perft mode runs a [Perft](https://www.chessprogramming.org/Perft) check using the built-in board representation to a depth of 6.
 
 ```
-$ chessview --perft
-Perft(1): 20 0ms
-Perft(2): 400 0ms
-Perft(3): 8902 1ms
-...
+$ chessview perft
+b2b4: 5293555
+c2c4: 5866666
+d2d4: 8879566
+e2e4: 9771632
+f2f4: 4890429
+g2g4: 5239875
+h2h4: 5385554
+a2a3: 4463267
+b2b3: 5310358
+c2c3: 5417640
+d2d3: 8073082
+e2e3: 9726018
+f2f3: 4404141
+g2g3: 5346260
+h2h3: 4463070
+b1a3: 4856835
+b1c3: 5708064
+g1f3: 5723523
+g1h3: 4877234
+
+Nodes searched: 119060324
 ```
 
 #### Player list
 
 To obtain a list of available bots:
 
-`chessview --players`
+`chessview list`
 
 ```
-$ chessview --players
+$ chessview list
 blacksquares
-bongcloud
 centre
 ...
 ```
@@ -51,7 +77,7 @@ centre
 To run a game, specify which bots to play for both white and black sides:
 
 ```
-$ chessview white black
+$ chessview view white black
 ...
 ```
 
