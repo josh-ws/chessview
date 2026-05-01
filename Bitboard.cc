@@ -329,6 +329,12 @@ static bool IsAttacked(const Position &p, int sq, uint8_t bycolor)
     return false;
 }
 
+bool IsAttacked(const Position &p, int col, int row, uint8_t color)
+{
+    const auto index = row * 8 + col;
+    return IsAttacked(p, index, color);
+}
+
 static bool IsCheck(const Position &p, uint8_t color)
 {
     return IsAttacked(p, Lsb(p.bitboards[color][KING]), color ^ 1);

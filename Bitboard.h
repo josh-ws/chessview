@@ -93,3 +93,4 @@ Piece GetPiece(const Position &p, int col, int row);
 int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves);
 Undo MakeMove(Position &p, const Move &m);
 void UndoMove(Position &p, const Move &m, const Undo &u);
+bool IsAttacked(const Position &p, int col, int row, uint8_t color);

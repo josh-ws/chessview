@@ -9,6 +9,7 @@
 #include <iostream>
 #include <iterator>
 #include <random>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -49,8 +50,12 @@ static Args parseArgs(int argc, char **argv)
             args.mode = static_cast<Mode>(i);
         }
     }
-    std::copy_if(vec.begin() + 1, vec.end(), std::back_inserter(args.players),
+    std::copy_if(vec.begin() + 2, vec.end(), std::back_inserter(args.players),
                  [argv](const auto &arg) { return arg != argv[0] && arg[0] != '-'; });
+
+    for (auto &p : args.players) {
+        std::cout << p << "\n";
+    }
     return args;
 }
 
@@ -128,11 +133,14 @@ void Bench()
 
 void Watch(const Args &opt)
 {
+    if (opt.players.size() != 2)
+        throw std::runtime_error("need 2 players to watch");
+
     const auto viewOptions = ViewerOptions{
         .title = "chessview",
         .width = 480,
         .height = 480,
-        .players = {"random", "random"},
+        .players = {opt.players},
     };
     RunViewer(viewOptions);
 }
