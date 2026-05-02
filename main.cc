@@ -122,11 +122,12 @@ void Bench(int depth)
 
     for (int i = 0; i < depth; i++) {
         auto p = CreateDefaultPosition();
-        for (int i = 0; i < 60; i++) { // TODO
+        for (;;) { // TODO
             const auto moves = GenerateMoves(p);
-            if (moves.size() == 0) {
+            if (moves.size() == 0)
                 break;
-            }
+            if (p.half >= FIFTY_MOVE_DRAW_PLIES)
+                break;
             std::uniform_int_distribution<int> dist(0, moves.size() - 1);
             MakeMove(p, moves[dist(rng)]);
         }

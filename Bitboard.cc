@@ -206,13 +206,14 @@ Piece GetPiece(const Position &p, int col, int row)
 
 Undo MakeMove(Position &p, const Move &m)
 {
-    Undo u{p.castling, p.epsq, NONE};
+    Undo u{p.castling, p.epsq, NONE, p.half};
 
     const auto mycolor = p.whoseturn;
     const auto theircolor = CColor(mycolor ^ 1);
     const auto from = 1ULL << m.from;
     const auto to = 1ULL << m.to;
     const auto move = from ^ to;
+    const auto isCap = p.occupancy[theircolor] & to;
 
     p.epsq = NO_EP;
     p.castling &= CASTLE_MASK[m.from] & CASTLE_MASK[m.to];
@@ -228,7 +229,7 @@ Undo MakeMove(Position &p, const Move &m)
     else if (m.flags & MV_DOUBLE) {
         p.epsq = (m.from + m.to) / 2;
     }
-    else if (p.occupancy[theircolor] & to) {
+    else if (isCap) {
         for (int pt = 0; pt < 6; pt++) {
             if (p.bitboards[theircolor][pt] & to) {
                 p.bitboards[theircolor][pt] ^= to;
@@ -237,6 +238,14 @@ Undo MakeMove(Position &p, const Move &m)
             }
         }
         p.occupancy[theircolor] ^= to;
+        p.half = 0;
+    }
+
+    if (TypeOf(m.piece) == PAWN || isCap) {
+        p.half = 0;
+    }
+    else {
+        p.half += 1;
     }
 
     if (m.flags & MV_CASTLING) {
@@ -289,6 +298,7 @@ void UndoMove(Position &p, const Move &m, const Undo &u)
 
     p.castling = u.castling;
     p.epsq = u.epsq;
+    p.half = u.half;
 }
 
 static bool IsAttacked(const Position &p, int sq, uint8_t bycolor)
@@ -336,7 +346,7 @@ bool IsAttacked(const Position &p, int col, int row, uint8_t color)
     return IsAttacked(p, index, color);
 }
 
-static bool IsCheck(const Position &p, uint8_t color)
+bool IsCheck(const Position &p, uint8_t color)
 {
     return IsAttacked(p, Lsb(p.bitboards[color][KING]), color ^ 1);
 }

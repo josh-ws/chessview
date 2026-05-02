@@ -1,11 +1,11 @@
 #pragma once
 
-#include <array>
 #include <cstdint>
 #include <vector>
 
-static constexpr int MAX_MOVES = 218; // https://chess.stackexchange.com/questions/4490/maximum-possible-movement-in-a-turn
-static constexpr int NO_EP = 64;
+constexpr int MAX_MOVES = 218; // https://chess.stackexchange.com/questions/4490/maximum-possible-movement-in-a-turn
+constexpr int NO_EP = 64;
+constexpr int FIFTY_MOVE_DRAW_PLIES = 100; // how many plies for the 50 move draw
 
 inline constexpr int ColOf(int bit) { return bit & 7; }
 inline constexpr int RowOf(int bit) { return bit >> 3; }
@@ -56,6 +56,7 @@ struct Undo {
     uint8_t castling;
     uint8_t epsq;
     uint8_t captured; // PieceType (NONE if no capture)
+    uint8_t half;
 };
 
 struct Position {
@@ -64,6 +65,7 @@ struct Position {
     CColor whoseturn;
     uint8_t epsq;
     uint8_t castling;
+    uint8_t half; // plies without a pawn move or capture. automatic draw at 100 (50 moves).
 };
 
 constexpr Position CreateDefaultPosition()
@@ -85,6 +87,7 @@ constexpr Position CreateDefaultPosition()
     p.occupancy[CBLACK] = p.bitboards[CBLACK][PAWN] | p.bitboards[CBLACK][KING] | p.bitboards[CBLACK][QUEEN] | p.bitboards[CBLACK][BISHOP] | p.bitboards[CBLACK][KNIGHT] | p.bitboards[CBLACK][ROOK];
     p.epsq = NO_EP;
     p.castling = CR_WK | CR_WQ | CR_BK | CR_BQ;
+    p.half = 0;
     return p;
 }
 
@@ -95,3 +98,4 @@ std::vector<Move> GenerateMoves(Position &p);
 Undo MakeMove(Position &p, const Move &m);
 void UndoMove(Position &p, const Move &m, const Undo &u);
 bool IsAttacked(const Position &p, int col, int row, uint8_t color);
+bool IsCheck(const Position &p, uint8_t color);

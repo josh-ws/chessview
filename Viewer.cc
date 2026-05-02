@@ -6,6 +6,7 @@
 #include "raylib.h"
 #include <cassert>
 #include <format>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <unordered_map>
@@ -63,6 +64,8 @@ struct Viewer {
     ViewerOptions options;
     Position position;
     Transition transition;
+    bool done = false;
+
     std::optional<Move> lastMove;
     std::vector<Player> players;
 
@@ -90,24 +93,47 @@ struct Viewer {
 
     void Update()
     {
-        // const auto state = board.getBoardState(0);
-        // if (state != STATE_NORMAL)
-        //     return;
-
         transition.Update();
         DoNextMove();
+        if (done)
+            HandleDone();
     }
 
     void DoNextMove()
     {
         if (transition.active)
             return;
-        const auto idx = position.whoseturn == CWHITE ? 0 : 1;
-        const auto move = players[idx].GetMove(position);
-        const auto captured = GetPiece(position, ColOf(move.to), RowOf(move.to));
-        MakeMove(position, move);
-        transition.Start(move, 15, captured);
-        lastMove = move;
+        if (position.half >= FIFTY_MOVE_DRAW_PLIES)
+            done = true;
+        if (GenerateMoves(position).empty())
+            done = true;
+
+        if (!done) {
+            const auto idx = position.whoseturn == CWHITE ? 0 : 1;
+            const auto move = players[idx].GetMove(position);
+            const auto captured = GetPiece(position, ColOf(move.to), RowOf(move.to));
+            MakeMove(position, move);
+            transition.Start(move, 1, captured);
+            lastMove = move;
+        }
+    }
+
+    void HandleDone()
+    {
+        if (!done)
+            return;
+        if (position.half >= FIFTY_MOVE_DRAW_PLIES)
+            std::cout << "1-1 (Draw by 50 move rule)\n";
+        if (GenerateMoves(position).empty()) {
+            if (IsCheck(position, position.whoseturn)) {
+                static const char *players[2] = {"white", "black"};
+                static const char *result[2] = {"1-0", "0-1"};
+                std::cout << result[position.whoseturn ^ 1] << " (" << players[position.whoseturn ^ 1] << " wins by checkmate)\n";
+            }
+            else {
+                std::cout << "1-1 (Stalemate)\n";
+            }
+        }
     }
 
     void Draw() const
@@ -200,7 +226,7 @@ void RunViewer(const ViewerOptions &options)
     InitWindow(options.width, options.height, options.title.c_str());
     SetTargetFPS(60);
     auto vw = Viewer(options);
-    while (!WindowShouldClose()) {
+    while (!WindowShouldClose() && !vw.done) {
         vw.Update();
         vw.Draw();
     }
