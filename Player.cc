@@ -1,14 +1,13 @@
 #include "Player.h"
 #include "Bitboard.h"
-#include "Types.h"
 #include <stdexcept>
 #include <vector>
 
 static int TileEval(const Position &p, std::function<int(int, int)> eval)
 {
     auto score = 0;
-    for (int col = 0; col < GRID_LENGTH; col++)
-        for (int row = 0; row < GRID_LENGTH; row++)
+    for (int col = 0; col < 8; col++)
+        for (int row = 0; row < 8; row++)
             if (GetPiece(p, col, row) != NONE)
                 score += eval(col, row);
     return score;
@@ -96,8 +95,8 @@ const static std::vector<Player> players = {
         .evaluation = [](Position &p, const Move &) {
             const auto me = p.whoseturn;
             int score = 0;
-            for (int col = 0; col < GRID_LENGTH; col++)
-                for (int row = 0; row < GRID_LENGTH; row++) {
+            for (int col = 0; col < 8; col++)
+                for (int row = 0; row < 8; row++) {
                     const auto piece = GetPiece(p, col, row);
                     if (piece != NONE && ColorOf(piece) == (me ^ 1)) {
                         if (IsAttacked(p, col, row, me)) {
@@ -114,8 +113,8 @@ const static std::vector<Player> players = {
         .evaluation = [](Position &p, const Move &) {
             const auto me = p.whoseturn;
             int score = 0;
-            for (int col = 0; col < GRID_LENGTH; col++)
-                for (int row = 0; row < GRID_LENGTH; row++) {
+            for (int col = 0; col < 8; col++)
+                for (int row = 0; row < 8; row++) {
                     const auto piece = GetPiece(p, col, row);
                     if (piece != NONE && ColorOf(piece) == me) {
                         if (IsAttacked(p, col, row, me ^ 1)) {
@@ -132,8 +131,8 @@ const static std::vector<Player> players = {
         .evaluation = [](Position &p, const Move &) {
             const auto me = p.whoseturn;
             int score = 0;
-            for (int col = 0; col < GRID_LENGTH; col++)
-                for (int row = 0; row < GRID_LENGTH; row++) {
+            for (int col = 0; col < 8; col++)
+                for (int row = 0; row < 8; row++) {
                     const auto piece = GetPiece(p, col, row);
                     if (piece != NONE && ColorOf(piece) == (me ^ 1)) {
                         if (IsAttacked(p, col, row, me)) {
@@ -150,8 +149,8 @@ const static std::vector<Player> players = {
         .evaluation = [](Position &p, const Move &) {
             const auto me = p.whoseturn;
             int score = 0;
-            for (int col = 0; col < GRID_LENGTH; col++)
-                for (int row = 0; row < GRID_LENGTH; row++) {
+            for (int col = 0; col < 8; col++)
+                for (int row = 0; row < 8; row++) {
                     const auto piece = GetPiece(p, col, row);
                     if (piece != NONE && ColorOf(piece) == me) {
                         if (IsAttacked(p, col, row, me ^ 1)) {
@@ -178,8 +177,8 @@ const static std::vector<Player> players = {
         .evaluation = [](Position &p, const Move &) {
             const static std::vector<int> bonus = {0, 1, 2, 3, 4, 5, 6, 7};
             int sum = 0;
-            for (int col = 0; col < GRID_LENGTH; col++)
-                for (int row = 0; row < GRID_LENGTH; row++) {
+            for (int col = 0; col < 8; col++)
+                for (int row = 0; row < 8; row++) {
                     const auto piece = GetPiece(p, col, row);
                     if (piece != NONE) {
                         if (ColorOf(piece) == CWHITE) {
@@ -199,8 +198,8 @@ const static std::vector<Player> players = {
         .evaluation = [](Position &p, const Move &) {
             const static std::vector<int> bonus = {0, 1, 2, 3, 4, 5, 6, 7};
             int sum = 0;
-            for (int col = 0; col < GRID_LENGTH; col++)
-                for (int row = 0; row < GRID_LENGTH; row++) {
+            for (int col = 0; col < 8; col++)
+                for (int row = 0; row < 8; row++) {
                     const auto piece = GetPiece(p, col, row);
                     if (piece != NONE) {
                         if (ColorOf(piece) == CWHITE) {

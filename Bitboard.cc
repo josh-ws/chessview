@@ -539,3 +539,34 @@ std::vector<Move> GenerateMoves(Position &p)
 
     return moves;
 }
+
+static bool IsInsufficientMaterial(const Position &p)
+{
+    constexpr auto DARK_SQ = 0xAA55AA55AA55AA55ULL;
+    constexpr auto LIGHT_SQ = ~DARK_SQ;
+
+    const auto heavy = p.bitboards[CWHITE][PAWN] | p.bitboards[CBLACK][PAWN] | p.bitboards[CWHITE][ROOK] | p.bitboards[CBLACK][ROOK] | p.bitboards[CWHITE][QUEEN] | p.bitboards[CBLACK][QUEEN];
+    if (heavy)
+        return false;
+
+    const auto knights = p.bitboards[CWHITE][KNIGHT] | p.bitboards[CBLACK][KNIGHT];
+    const auto bishops = p.bitboards[CWHITE][BISHOP] | p.bitboards[CBLACK][BISHOP];
+    if (std::popcount(knights | bishops) <= 1)
+        return true;
+    if (knights == 0 && ((bishops & LIGHT_SQ) == 0 || (bishops & DARK_SQ) == 0))
+        return true;
+
+    return false;
+}
+
+State GetPositionState(Position &p)
+{
+    if (p.half >= FIFTY_MOVE_DRAW_PLIES)
+        return S_FIFTY;
+    if (GenerateMoves(p).empty())
+        return IsCheck(p, p.whoseturn) ? S_CHECKMATE : S_STALEMATE;
+    if (IsInsufficientMaterial(p))
+        return S_INSUFFICIENTMATERIAL;
+
+    return S_NRM;
+}

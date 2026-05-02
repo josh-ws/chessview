@@ -2,7 +2,6 @@
 
 #include "Bitboard.h"
 #include "Player.h"
-#include "Types.h"
 #include "raylib.h"
 #include <cassert>
 #include <format>
@@ -13,11 +12,11 @@
 
 const Color moveColor = Color(205, 210, 106, 100);
 
-std::unordered_map<u8, Texture2D> CreatePieceTextures()
+std::unordered_map<uint8_t, Texture2D> CreatePieceTextures()
 {
     static std::string pieces[] = {"pawn", "king", "queen", "bishop", "knight", "rook"};
 
-    auto textures = std::unordered_map<u8, Texture2D>();
+    auto textures = std::unordered_map<uint8_t, Texture2D>();
     for (auto color : {CBLACK, CWHITE})
         for (auto piece : {PAWN, KING, QUEEN, BISHOP, KNIGHT, ROOK}) {
             const auto colorStr = color == CBLACK ? "black" : "white";
@@ -32,9 +31,9 @@ struct Transition {
     bool active = false;
     int ticks = 0;
     int maxTicks = 0;
-    u8 capturedPiece = NONE;
+    uint8_t capturedPiece = NONE;
 
-    void Start(const Move &m, int newTicks, u8 captured)
+    void Start(const Move &m, int newTicks, uint8_t captured)
     {
         move = m;
         active = true;
@@ -64,13 +63,14 @@ struct Viewer {
     ViewerOptions options;
     Position position;
     Transition transition;
-    bool done = false;
+
+    uint8_t state = S_NRM;
 
     std::optional<Move> lastMove;
     std::vector<Player> players;
 
     Texture2D boardTexture;
-    std::unordered_map<u8, Texture2D> pieceTextures;
+    std::unordered_map<uint8_t, Texture2D> pieceTextures;
 
     Viewer(ViewerOptions v)
         : options(std::move(v)),
@@ -95,44 +95,47 @@ struct Viewer {
     {
         transition.Update();
         DoNextMove();
-        if (done)
-            HandleDone();
+        if (state != S_NRM)
+            GameOver();
     }
 
     void DoNextMove()
     {
         if (transition.active)
             return;
-        if (position.half >= FIFTY_MOVE_DRAW_PLIES)
-            done = true;
-        if (GenerateMoves(position).empty())
-            done = true;
+        state = GetPositionState(position);
+        if (state != S_NRM)
+            return;
 
-        if (!done) {
-            const auto idx = position.whoseturn == CWHITE ? 0 : 1;
-            const auto move = players[idx].GetMove(position);
-            const auto captured = GetPiece(position, ColOf(move.to), RowOf(move.to));
-            MakeMove(position, move);
-            transition.Start(move, 1, captured);
-            lastMove = move;
-        }
+        const auto idx = position.whoseturn == CWHITE ? 0 : 1;
+        const auto move = players[idx].GetMove(position);
+        const auto captured = GetPiece(position, ColOf(move.to), RowOf(move.to));
+        MakeMove(position, move);
+        transition.Start(move, 1, captured);
+        lastMove = move;
     }
 
-    void HandleDone()
+    void GameOver()
     {
-        if (!done)
-            return;
-        if (position.half >= FIFTY_MOVE_DRAW_PLIES)
-            std::cout << "1-1 (Draw by 50 move rule)\n";
-        if (GenerateMoves(position).empty()) {
-            if (IsCheck(position, position.whoseturn)) {
-                static const char *players[2] = {"white", "black"};
-                static const char *result[2] = {"1-0", "0-1"};
-                std::cout << result[position.whoseturn ^ 1] << " (" << players[position.whoseturn ^ 1] << " wins by checkmate)\n";
-            }
-            else {
-                std::cout << "1-1 (Stalemate)\n";
-            }
+        constexpr static const char *players[2] = {"white", "black"};
+        constexpr static const char *result[2] = {"1-0", "0-1"};
+
+        switch (state) {
+        case S_CHECKMATE:
+            std::cout << result[position.whoseturn ^ 1] << " (" << players[position.whoseturn ^ 1] << " wins by checkmate)\n";
+            break;
+        case S_STALEMATE:
+            std::cout << "0-0 (Stalemate)\n";
+            break;
+        case S_FIFTY:
+            std::cout << "0-0 (Draw by 50-move rule)\n";
+            break;
+        case S_INSUFFICIENTMATERIAL:
+            std::cout << "0-0 (Insufficient material)\n";
+            break;
+        case S_NRM:
+        default:
+            std::cout << "Unexpected end state.. likely a bug?\n";
         }
     }
 
@@ -161,8 +164,8 @@ struct Viewer {
 
     void DrawPieces() const
     {
-        for (int col = 0; col < GRID_LENGTH; col++) {
-            for (int row = 0; row < GRID_LENGTH; row++) {
+        for (int col = 0; col < 8; col++) {
+            for (int row = 0; row < 8; row++) {
                 const auto piece = GetPiece(position, col, row);
                 if (transition.active && ColOf(transition.move.to) == col && RowOf(transition.move.to) == row)
                     continue;
@@ -209,8 +212,8 @@ struct Viewer {
     {
         auto target = LoadRenderTexture(options.width, options.height);
         BeginTextureMode(target);
-        for (int col = 0; col < GRID_LENGTH; col++) {
-            for (int row = 0; row < GRID_LENGTH; row++) {
+        for (int col = 0; col < 8; col++) {
+            for (int row = 0; row < 8; row++) {
                 const auto color = (col + row) & 1 ? LIGHTGRAY : DARKGRAY;
                 DrawRectangle(col * TileSize(), row * TileSize(), TileSize(), TileSize(), color);
             }
@@ -226,7 +229,7 @@ void RunViewer(const ViewerOptions &options)
     InitWindow(options.width, options.height, options.title.c_str());
     SetTargetFPS(60);
     auto vw = Viewer(options);
-    while (!WindowShouldClose() && !vw.done) {
+    while (!WindowShouldClose() && vw.state == S_NRM) {
         vw.Update();
         vw.Draw();
     }

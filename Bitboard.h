@@ -44,6 +44,14 @@ enum MoveFlag : uint8_t {
     MV_CASTLING = 4,
 };
 
+enum State : uint8_t {
+    S_NRM,
+    S_CHECKMATE,
+    S_STALEMATE,
+    S_FIFTY,
+    S_INSUFFICIENTMATERIAL,
+};
+
 struct Move {
     uint8_t from;
     uint8_t to;
@@ -99,3 +107,5 @@ Undo MakeMove(Position &p, const Move &m);
 void UndoMove(Position &p, const Move &m, const Undo &u);
 bool IsAttacked(const Position &p, int col, int row, uint8_t color);
 bool IsCheck(const Position &p, uint8_t color);
+
+State GetPositionState(Position &p);
