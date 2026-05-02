@@ -81,6 +81,10 @@ $ chessview view white black
 ...
 ```
 
+**Viewer controls**
+
+- Space: Pause the viewer. No new moves will be executed. Press again to unpause.
+
 ### Players
 
 These are the built-in bots, ready to play against.

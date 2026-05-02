@@ -10,6 +10,8 @@
 #include <optional>
 #include <unordered_map>
 
+constexpr const int TRANSITION_FRAMES = 20;
+
 const Color moveColor = Color(205, 210, 106, 100);
 
 std::unordered_map<uint8_t, Texture2D> CreatePieceTextures()
@@ -64,6 +66,7 @@ struct Viewer {
     Position position;
     Transition transition;
 
+    bool paused = false;
     uint8_t state = S_NRM;
 
     std::optional<Move> lastMove;
@@ -93,10 +96,14 @@ struct Viewer {
 
     void Update()
     {
+        if (IsKeyPressed(KEY_SPACE))
+            paused = !paused;
         transition.Update();
-        DoNextMove();
-        if (state != S_NRM)
-            GameOver();
+        if (!paused) {
+            DoNextMove();
+            if (state != S_NRM)
+                GameOver();
+        }
     }
 
     void DoNextMove()
@@ -111,7 +118,7 @@ struct Viewer {
         const auto move = players[idx].GetMove(position);
         const auto captured = GetPiece(position, ColOf(move.to), RowOf(move.to));
         MakeMove(position, move);
-        transition.Start(move, 1, captured);
+        transition.Start(move, TRANSITION_FRAMES, captured);
         lastMove = move;
     }
 
