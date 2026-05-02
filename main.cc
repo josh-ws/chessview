@@ -17,8 +17,7 @@ using std::chrono::duration_cast;
 using std::chrono::milliseconds;
 using std::chrono::steady_clock;
 
-constexpr int PerftMaxDepth = 6;
-constexpr int BenchGames = 100000;
+static std::string programName = "";
 
 enum class Mode {
     Unknown = -1,
@@ -32,8 +31,22 @@ enum class Mode {
 
 const static std::string modes[] = {"help", "bench", "list", "perft", "play", "watch"};
 
+void Die(std::string msg = "")
+{
+    if (!msg.empty()) {
+        std::cerr << msg << '\n';
+    }
+    std::cerr << "Usage: " << '\n';
+    std::cerr << "    " << programName << " bench [games]          Benchmark the time it takes to run provided number of games\n";
+    std::cerr << "    " << programName << " list                   Returns a list of available players\n";
+    std::cerr << "    " << programName << " perft [depth]          Run a perft performance/accuracy check with the specified depth\n";
+    std::cerr << "    " << programName << " watch [white] [black]  Watch `white` play `black`\n";
+    std::exit(1);
+}
+
 struct Args {
     Mode mode = Mode::Unknown;
+    int depth;
     std::vector<std::string> players;
 };
 
@@ -53,24 +66,19 @@ static Args parseArgs(int argc, char **argv)
     std::copy_if(vec.begin() + 2, vec.end(), std::back_inserter(args.players),
                  [argv](const auto &arg) { return arg != argv[0] && arg[0] != '-'; });
 
-    for (auto &p : args.players) {
-        std::cout << p << "\n";
+    if (args.mode == Mode::Perft || args.mode == Mode::Bench) {
+        if (vec.size() >= 3) {
+            args.depth = std::stoi(vec.back());
+        }
+        else if (args.mode == Mode::Perft) {
+            args.depth = 5;
+        }
+        else if (args.mode == Mode::Bench) {
+            args.depth = 10'000;
+        }
     }
-    return args;
-}
 
-[[noreturn]] void UsageAndExit(std::string progName, std::string msg = "")
-{
-    if (!msg.empty()) {
-        std::cerr << msg << '\n';
-    }
-    std::cerr << "Usage: " << '\n';
-    std::cerr << "    " << progName << " bench                  Benchmark running some games\n";
-    std::cerr << "    " << progName << " list                   Returns a list of available players\n";
-    std::cerr << "    " << progName << " perft                  Run a perft performance/accuracy check\n";
-    std::cerr << "    " << progName << " play [player]          Play against the specified bot\n";
-    std::cerr << "    " << progName << " watch [white] [black]  Watch `white` play `black`\n";
-    std::exit(1);
+    return args;
 }
 
 void PlayerList()
@@ -80,7 +88,7 @@ void PlayerList()
     }
 }
 
-void DoPerft()
+void DoPerft(int depth)
 {
     static std::array<Move, MAX_MOVES> moves;
 
@@ -100,7 +108,7 @@ void DoPerft()
         auto newPos = p;
         MakeMove(newPos, move);
 
-        const auto r = Perft(newPos, PerftMaxDepth - 1);
+        const auto r = Perft(newPos, depth - 1);
         tot += r;
         std::cout << getTile(move.from) << getTile(move.to) << ": " << r << "\n";
     }
@@ -108,15 +116,15 @@ void DoPerft()
     std::cout << "\nNodes searched: " << tot << "\n";
 }
 
-void Bench()
+void Bench(int depth)
 {
     auto t1 = steady_clock::now();
-    std::cout << "Running " << BenchGames << " games..." << std::endl;
+    std::cout << "Running " << depth << " games..." << std::endl;
 
     std::array<Move, MAX_MOVES> moves;
     std::mt19937 rng{std::random_device{}()};
 
-    for (int i = 0; i < BenchGames; i++) {
+    for (int i = 0; i < depth; i++) {
         auto board = CreateDefaultPosition();
         for (int i = 0; i < 60; i++) {
             const auto n = GenerateMoves(board, moves);
@@ -147,27 +155,29 @@ void Watch(const Args &opt)
 
 int main(int argc, char **argv)
 {
+    programName = argv[0];
+
     InitLookupTables();
 
     const auto opt = parseArgs(argc, argv);
     switch (opt.mode) {
     case Mode::Unknown:
-        UsageAndExit(argv[0], "Unrecognized command");
+        Die("Unrecognized command");
         break;
     case Mode::Help:
-        UsageAndExit(argv[0]);
+        Die();
         break;
     case Mode::Bench:
-        Bench();
+        Bench(opt.depth);
         break;
     case Mode::List:
         PlayerList();
         break;
     case Mode::Perft:
-        DoPerft();
+        DoPerft(opt.depth);
         break;
     case Mode::Play:
-        std::cout << "not implemented!\n";
+        Die("Not implemented");
         break;
     case Mode::Watch:
         Watch(opt);
