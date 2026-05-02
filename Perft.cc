@@ -1,22 +1,21 @@
 #include "Perft.h"
 #include "Bitboard.h"
 
-uint64_t Perft(Position &p, int depth) {
+uint64_t Perft(Position &p, int depth)
+{
     if (depth <= 0)
         return 1;
 
-    std::array<Move, MAX_MOVES> moves;
-    int nmoves = GenerateMoves(p, moves);
-
+    const auto moves = GenerateMoves(p);
     if (depth == 1)
-        return nmoves;
+        return moves.size();
 
     auto t = std::uint64_t(0);
 
-    for (int i = 0; i < nmoves; i++) {
-        const auto u = MakeMove(p, moves[i]);
+    for (const auto &move : moves) {
+        const auto u = MakeMove(p, move);
         t += Perft(p, depth - 1);
-        UndoMove(p, moves[i], u);
+        UndoMove(p, move, u);
     }
 
     return t;

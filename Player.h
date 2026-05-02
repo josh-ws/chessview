@@ -2,7 +2,6 @@
 #define PLAYER_H
 
 #include "Bitboard.h"
-#include <array>
 #include <climits>
 #include <functional>
 #include <random>
@@ -16,35 +15,32 @@ struct Player {
     std::string description;
     EvalFunction evaluation;
 
-    inline Move GetMove(Position &p) const {
-        static std::array<Move, MAX_MOVES> moves{};
-
-        const auto n = GenerateMoves(p, moves);
-        if (n == 0)
+    inline Move GetMove(Position &p) const
+    {
+        const auto moves = GenerateMoves(p);
+        if (moves.size() == 0)
             throw std::runtime_error("empty move list passed to GetMove()");
         auto score = INT_MIN;
-        auto idx = size_t(0);
         auto ties = 1;
+        auto selected = moves[0];
         static thread_local auto rng = std::mt19937{std::random_device{}()};
-        for (size_t i = 0; i < n; i++) {
-            const auto &move = moves[i];
+        for (const auto &move : moves) {
+            const auto u = MakeMove(p, move);
+            const auto newScore = evaluation(p, move);
+            UndoMove(p, move, u);
 
-            // TODO - this is horrible
-            auto copy = Position(p);
-            MakeMove(copy, move);
-
-            const auto newScore = evaluation(copy, move);
             if (newScore > score) {
                 score = newScore;
-                idx = i;
                 ties = 1;
-            } else if (newScore == score) {
+                selected = move;
+            }
+            else if (newScore == score) {
                 ties += 1;
                 if (std::uniform_int_distribution<int>(0, ties - 1)(rng) == 0)
-                    idx = i;
+                    selected = move;
             }
         }
-        return moves[idx];
+        return selected;
     }
 };
 

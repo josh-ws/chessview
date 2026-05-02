@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cstdint>
 #include <raylib.h>
+#include <vector>
 
 inline constexpr uint64_t BitOf(uint8_t col, uint8_t row) { return 1ULL << (row * 8 + col); }
 
@@ -343,31 +344,27 @@ static bool IsCheck(const Position &p, uint8_t color)
 static bool CheckLegal(Position &p, const Move &m)
 {
     const auto mycolor = p.whoseturn;
-
     const auto undo = MakeMove(p, m);
     const auto isCheck = IsCheck(p, mycolor);
     UndoMove(p, m, undo);
     return !isCheck;
 }
 
-int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves)
+std::vector<Move> GenerateMoves(Position &p)
 {
+    auto moves = std::vector<Move>();
+    moves.reserve(MAX_MOVES);
+
     const auto mycolor = p.whoseturn;
     const auto theircolor = p.whoseturn ^ CBLACK;
     const auto empty = ~(p.occupancy[CWHITE] | p.occupancy[CBLACK]);
     const auto all = p.occupancy[CWHITE] | p.occupancy[CBLACK];
     const auto lastrank = (mycolor == CWHITE) ? RANK_8 : RANK_1;
 
-    int index = 0;
-
     const auto emit = [&](uint8_t from, uint8_t to, uint8_t piece, uint8_t flags = 0, uint8_t promo = NONE) {
-        moves[index].from = from;
-        moves[index].to = to;
-        moves[index].piece = piece;
-        moves[index].flags = flags;
-        moves[index].promo = promo;
-        if (CheckLegal(p, moves[index]))
-            index += 1;
+        auto move = Move{from, to, piece, flags, promo};
+        if (CheckLegal(p, move))
+            moves.emplace_back(move);
     };
 
     const auto doTargets = [&](uint64_t targets, int add, uint8_t flags = 0) {
@@ -530,5 +527,5 @@ int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves)
         }
     }
 
-    return index;
+    return moves;
 }

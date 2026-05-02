@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <vector>
 
 static constexpr int MAX_MOVES = 218; // https://chess.stackexchange.com/questions/4490/maximum-possible-movement-in-a-turn
 static constexpr int NO_EP = 64;
@@ -90,7 +91,7 @@ constexpr Position CreateDefaultPosition()
 void InitLookupTables();
 
 Piece GetPiece(const Position &p, int col, int row);
-int GenerateMoves(Position &p, std::array<Move, MAX_MOVES> &moves);
+std::vector<Move> GenerateMoves(Position &p);
 Undo MakeMove(Position &p, const Move &m);
 void UndoMove(Position &p, const Move &m, const Undo &u);
 bool IsAttacked(const Position &p, int col, int row, uint8_t color);

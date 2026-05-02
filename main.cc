@@ -90,8 +90,6 @@ void PlayerList()
 
 void DoPerft(int depth)
 {
-    static std::array<Move, MAX_MOVES> moves;
-
     const auto getTile = [&](int index) {
         std::string s = "";
         s += "abcdefgh"[index % 8];
@@ -100,11 +98,10 @@ void DoPerft(int depth)
     };
 
     auto p = CreateDefaultPosition();
-    auto n = GenerateMoves(p, moves);
+    const auto moves = GenerateMoves(p);
     auto tot = uint64_t(0);
 
-    for (int i = 0; i < n; i++) {
-        const auto &move = moves[i];
+    for (const auto &move : moves) {
         auto newPos = p;
         MakeMove(newPos, move);
 
@@ -121,18 +118,17 @@ void Bench(int depth)
     auto t1 = steady_clock::now();
     std::cout << "Running " << depth << " games..." << std::endl;
 
-    std::array<Move, MAX_MOVES> moves;
     std::mt19937 rng{std::random_device{}()};
 
     for (int i = 0; i < depth; i++) {
-        auto board = CreateDefaultPosition();
-        for (int i = 0; i < 60; i++) {
-            const auto n = GenerateMoves(board, moves);
-            if (!n) {
+        auto p = CreateDefaultPosition();
+        for (int i = 0; i < 60; i++) { // TODO
+            const auto moves = GenerateMoves(p);
+            if (moves.size() == 0) {
                 break;
             }
-            std::uniform_int_distribution<int> dist(0, n - 1);
-            MakeMove(board, moves[dist(rng)]);
+            std::uniform_int_distribution<int> dist(0, moves.size() - 1);
+            MakeMove(p, moves[dist(rng)]);
         }
     }
     auto t2 = steady_clock::now();

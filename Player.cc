@@ -52,49 +52,39 @@ const static std::vector<Player> players = {
         .name = "min_oppt",
         .description = "Tries to minimize the number of moves the opponent has",
         .evaluation = [](Position &p, const Move &) {
-            static auto moves = std::array<Move, MAX_MOVES>();
-            return -GenerateMoves(p, moves);
+            return -GenerateMoves(p).size();
         },
     },
     Player{
         .name = "max_oppt",
         .description = "Tries to maximize the number of moves the opponent has",
         .evaluation = [](Position &p, const Move &) {
-            static auto moves = std::array<Move, MAX_MOVES>();
-            return GenerateMoves(p, moves);
+            return GenerateMoves(p).size();
         },
     },
     Player{
         .name = "min_self",
         .description = "Tries to minimize the number of moves that the player has",
         .evaluation = [](Position &p, const Move &) {
-            static auto moves = std::array<Move, MAX_MOVES>();
+            const auto moves = GenerateMoves(p);
             int score = 0;
-
-            const auto n = GenerateMoves(p, moves);
-            for (int i = 0; i < n; i++) {
-                auto movesNext = std::array<Move, MAX_MOVES>();
-                const auto &move = moves[i];
+            for (const auto &move : moves) {
                 const auto u = MakeMove(p, move);
-                score += GenerateMoves(p, movesNext);
+                score -= GenerateMoves(p).size();
                 UndoMove(p, move, u);
             }
-            return -score;
+            return score;
         },
     },
     Player{
         .name = "max_self",
         .description = "Tries to maximize the number of moves that the player has",
         .evaluation = [](Position &p, const Move &) {
-            static auto moves = std::array<Move, MAX_MOVES>();
+            const auto moves = GenerateMoves(p);
             int score = 0;
-
-            const auto n = GenerateMoves(p, moves);
-            for (int i = 0; i < n; i++) {
-                auto movesNext = std::array<Move, MAX_MOVES>();
-                const auto &move = moves[i];
+            for (const auto &move : moves) {
                 const auto u = MakeMove(p, move);
-                score += GenerateMoves(p, movesNext);
+                score += GenerateMoves(p).size();
                 UndoMove(p, move, u);
             }
             return score;
