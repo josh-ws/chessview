@@ -6,84 +6,80 @@ It was originally written sometime in 2020.
 
 ![Application preview image](Img/preview.png)
 
+## Features
+
+- Over a dozen built-in weird Chess engines.
+- Trivially easy to extend with new bots by adding one to `Player.cc`.
+- Full legal move generation including en passant, castling and draw conditions verified against [perft results](https://www.chessprogramming.org/Perft_Results) (via `chessview test`).
+- Fast implementation using Bitboards. Perft(6) in ~1.8s and can play around 5,000 games per second.
+
 ## Building
 
 Install required dependencies:
 
-- g++
-- SDL2
-- SDL2_image
+- C++ compiler (g++, clang, ...)
+- raylib
 
 Then run `make` in the root directory. It will generate a `chess` binary.
 
 ## Usage
 
-### Command line
-
-#### Bench
-
-Bench runs a benchmark against 100,000 random games and reports the elapsed time.
-
 ```
-$ chessview bench
-Running 100000 games...
-Done in 2968ms
+chessview <command> [options]
 ```
 
-#### Perft
+Run `chessview --help-all` for a full reference of every command. Each command also accepts `--help` individually (e.g. `chessview perft --help`).
 
-Perft mode runs a [Perft](https://www.chessprogramming.org/Perft) check using the built-in board representation to a depth of 6.
+### Commands
+
+#### `bench`: benchmark random games
+
+Plays N random games and reports elapsed time. Defaults to 1000 games.
 
 ```
-$ chessview perft
-b2b4: 5293555
-c2c4: 5866666
-d2d4: 8879566
-e2e4: 9771632
-f2f4: 4890429
-g2g4: 5239875
-h2h4: 5385554
-a2a3: 4463267
-b2b3: 5310358
-c2c3: 5417640
-d2d3: 8073082
-e2e3: 9726018
-f2f3: 4404141
-g2g3: 5346260
-h2h3: 4463070
-b1a3: 4856835
-b1c3: 5708064
-g1f3: 5723523
-g1h3: 4877234
-
-Nodes searched: 119060324
+$ chessview bench --count 1000
+Running 1000 games...
+Done in 312ms
 ```
 
-#### Player list
+#### `perft`: perft accuracy/performance check
 
-To obtain a list of available bots:
+Runs a [Perft](https://www.chessprogramming.org/Perft) check from a given position. Defaults to depth 5 from the standard starting position.
 
-`chessview list`
+```
+$ chessview perft --depth 5
+$ chessview perft --depth 4 --fen "<FEN string>"
+```
+
+#### `watch`: watch two bots play
+
+Specify the two bots playing white and black:
+
+```
+$ chessview watch random center
+$ chessview watch random center --fen "<FEN string>"
+```
+
+Viewer controls:
+
+- **Space**: pause the viewer. No new moves will be executed. Press again to unpause.
+
+#### `list`: list available bots
 
 ```
 $ chessview list
-blacksquares
-centre
+blacksquares: ...
+center: ...
 ...
 ```
 
-#### Running a bot game
+#### `test`: run perft against a suite of known positions
 
-To run a game, specify which bots to play for both white and black sides:
+Verifies move generation correctness against a set of well-known test positions.
 
 ```
-$ chessview view white black
-...
+$ chessview test
 ```
-
-**Viewer controls**
-
-- Space: Pause the viewer. No new moves will be executed. Press again to unpause.
 
 ### Players
 
@@ -105,18 +101,11 @@ These are the built-in bots, ready to play against.
 - aggressive: Tries to move pieces towards the enemy's side
 - passive: Tries not to move pieces towards the enemy's side
 
-## Features
-
-- Implements the more complex rules of chess, including **en passant**, **castling** and **most stalemate conditions** (with the exception of three-fold repetition).
-- Generates all legal moves for a position.
-- Ability to easily add additional bots into the application.
-
 ## Planned
 
 - Many more dumb but interesting bots.
 - Threefold repetition stalemate [rule](https://en.wikipedia.org/wiki/Threefold_repetition).
 - Support for PGN string imports (to watch existing games).
-- FEN import, to start from a known position.
 - Tournaments between bots.
 - Recording of games to files (probably in PGN notation).
 
@@ -124,4 +113,4 @@ These are the built-in bots, ready to play against.
 
 This project is MIT licensed (see LICENSE) and bundles:
 
-- [CLI11](https://https://github.com/CLIUtils/CLI11) - Command line parsing, BSD 3-clause
+- [CLI11](https://github.com/CLIUtils/CLI11) - Command line parsing, BSD 3-clause

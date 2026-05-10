@@ -1,4 +1,5 @@
 #include "Bitboard.h"
+#include "CLI11.hpp"
 #include "FEN.h"
 #include "Perft.h"
 #include "Player.h"
@@ -21,74 +22,52 @@ using std::chrono::steady_clock;
 static std::string programName = "";
 
 enum class Mode {
-    Unknown = -1,
-    Help,
     Bench,
     List,
     Perft,
-    Play,
     Test,
     Watch,
 };
 
-const static std::vector<std::string> modes = {"help", "bench", "list", "perft", "play", "test", "watch"};
-
-void Die(std::string msg = "")
-{
-    if (!msg.empty()) {
-        std::cerr << msg << '\n';
-    }
-    std::cerr << "Usage: " << '\n';
-    std::cerr << "    " << programName << " bench [games]          Benchmark the time it takes to run provided number of games\n";
-    std::cerr << "    " << programName << " help                   Display this message\n";
-    std::cerr << "    " << programName << " list                   Returns a list of available players\n";
-    std::cerr << "    " << programName << " perft [depth]          Run a perft performance/accuracy check with the specified depth\n";
-    std::cerr << "    " << programName << " test                   Checks perft against various positions, ensures accuracy\n";
-    std::cerr << "    " << programName << " watch [white] [black]  Watch `white` play `black`\n";
-    std::exit(1);
-}
-
 struct Args {
-    Mode mode = Mode::Unknown;
-    int depth;
+    Mode mode;
+    int depth = 0;
     std::vector<std::string> players;
-    std::string fen;
+    std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 };
 
 static Args parseArgs(int argc, char **argv)
 {
-    auto vec = std::vector<std::string>{argv, argv + argc};
     auto args = Args{};
-    if (vec.size() <= 1) {
-        args.mode = Mode::Help;
-        return args;
+    auto app = CLI::App{"chessview"};
+    app.require_subcommand(1);
+    app.set_help_all_flag("--help-all", "Show help for all subcommands");
+
+    auto *bench = app.add_subcommand("bench", "Benchmark random games");
+    bench->add_option("--count", args.depth, "Number of games to run")->default_val(1000);
+    bench->callback([&] { args.mode = Mode::Bench; });
+
+    app.add_subcommand("list", "List available players")->callback([&] { args.mode = Mode::List; });
+
+    auto *perft = app.add_subcommand("perft", "Run a perft check");
+    perft->add_option("--depth", args.depth, "Search depth")->default_val(5);
+    perft->add_option("--fen", args.fen, "Starting position (FEN)");
+    perft->callback([&] { args.mode = Mode::Perft; });
+
+    app.add_subcommand("test", "Run perft accuracy tests")->callback([&] { args.mode = Mode::Test; });
+
+    auto *watch = app.add_subcommand("watch", "Watch two engines play against each other");
+    watch->add_option("players", args.players, "Players")->required()->expected(2);
+    watch->add_option("--fen", args.fen, "Starting position (FEN)");
+    watch->callback([&] { args.mode = Mode::Watch; });
+
+    try {
+        app.parse(argc, argv);
     }
-    if (vec.size() == 2 && (vec[1] == "-h" || vec[1] == "--help")) {
-        args.mode = Mode::Help;
-        return args;
-    }
-    for (size_t i = 0; i < modes.size(); i++) {
-        if (vec[1] == modes[i]) {
-            args.mode = static_cast<Mode>(i);
-        }
+    catch (const CLI::ParseError &e) {
+        std::exit(app.exit(e));
     }
 
-    std::copy_if(vec.begin() + 2, vec.end(), std::back_inserter(args.players),
-                 [argv](const auto &arg) { return arg != argv[0] && arg[0] != '-'; });
-
-    if (args.mode == Mode::Perft || args.mode == Mode::Bench) {
-        if (vec.size() >= 3) {
-            args.depth = std::stoi(vec.back());
-        }
-        else if (args.mode == Mode::Perft) {
-            args.depth = 5;
-        }
-        else if (args.mode == Mode::Bench) {
-            args.depth = 10'000;
-        }
-    }
-
-    args.fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     return args;
 }
 
@@ -170,12 +149,6 @@ int main(int argc, char **argv)
 
     const auto opt = parseArgs(argc, argv);
     switch (opt.mode) {
-    case Mode::Unknown:
-        Die("Unrecognized command");
-        break;
-    case Mode::Help:
-        Die();
-        break;
     case Mode::Bench:
         Bench(opt.depth);
         break;
@@ -184,9 +157,6 @@ int main(int argc, char **argv)
         break;
     case Mode::Perft:
         DoPerft(opt.depth, opt.fen);
-        break;
-    case Mode::Play:
-        Die("Not implemented");
         break;
     case Mode::Test:
         RunTests();
