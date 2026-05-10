@@ -1,9 +1,9 @@
 #include "Bitboard.h"
+#include "FEN.h"
 #include "Perft.h"
 #include "Player.h"
 #include "Viewer.h"
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
@@ -38,6 +38,7 @@ void Die(std::string msg = "")
     }
     std::cerr << "Usage: " << '\n';
     std::cerr << "    " << programName << " bench [games]          Benchmark the time it takes to run provided number of games\n";
+    std::cerr << "    " << programName << " help                   Display this message\n";
     std::cerr << "    " << programName << " list                   Returns a list of available players\n";
     std::cerr << "    " << programName << " perft [depth]          Run a perft performance/accuracy check with the specified depth\n";
     std::cerr << "    " << programName << " watch [white] [black]  Watch `white` play `black`\n";
@@ -48,6 +49,7 @@ struct Args {
     Mode mode = Mode::Unknown;
     int depth;
     std::vector<std::string> players;
+    std::string fen;
 };
 
 static Args parseArgs(int argc, char **argv)
@@ -78,6 +80,7 @@ static Args parseArgs(int argc, char **argv)
         }
     }
 
+    args.fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     return args;
 }
 
@@ -88,8 +91,10 @@ void PlayerList()
     }
 }
 
-void DoPerft(int depth)
+void DoPerft(int depth, std::string fen)
 {
+    auto p = ParseFEN(fen);
+
     const auto getTile = [&](int index) {
         std::string s = "";
         s += "abcdefgh"[index % 8];
@@ -97,16 +102,14 @@ void DoPerft(int depth)
         return s;
     };
 
-    auto p = CreateDefaultPosition();
     const auto moves = GenerateMoves(p);
     auto tot = uint64_t(0);
 
     for (const auto &move : moves) {
-        auto newPos = p;
-        MakeMove(newPos, move);
-
-        const auto r = Perft(newPos, depth - 1);
+        const auto undo = MakeMove(p, move);
+        const auto r = Perft(p, depth - 1);
         tot += r;
+        UndoMove(p, move, undo);
         std::cout << getTile(move.from) << getTile(move.to) << ": " << r << "\n";
     }
 
@@ -122,7 +125,7 @@ void Bench(int depth)
 
     for (int i = 0; i < depth; i++) {
         auto p = CreateDefaultPosition();
-        for (;;) { // TODO
+        for (;;) {
             const auto state = GetPositionState(p);
             if (state != S_NRM)
                 break;
@@ -146,6 +149,7 @@ void Watch(const Args &opt)
         .width = 480,
         .height = 480,
         .players = {opt.players},
+        .fen = opt.fen,
     };
     RunViewer(viewOptions);
 }
@@ -171,7 +175,7 @@ int main(int argc, char **argv)
         PlayerList();
         break;
     case Mode::Perft:
-        DoPerft(opt.depth);
+        DoPerft(opt.depth, opt.fen);
         break;
     case Mode::Play:
         Die("Not implemented");

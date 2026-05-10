@@ -1,17 +1,7 @@
-#ifndef FEN_H
-#define FEN_H
+#pragma once
 
-#include "Bitboard.h"
 #include <string>
 
-Position ParseFEN(const std::string &str)
-{
-    return CreateDefaultPosition(); // TODO
-}
+struct Position;
 
-std::string ToFEN(const Position &position)
-{
-    return "";
-}
-
-#endif
+Position ParseFEN(const std::string &str);

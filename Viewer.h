@@ -9,6 +9,7 @@ struct ViewerOptions {
     int width;
     int height;
     std::vector<std::string> players;
+    std::string fen;
 };
 
 void RunViewer(const ViewerOptions &options);

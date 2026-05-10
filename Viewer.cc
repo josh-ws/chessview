@@ -1,12 +1,12 @@
 #include "Viewer.h"
 
 #include "Bitboard.h"
+#include "FEN.h"
 #include "Player.h"
 #include "raylib.h"
 #include <cassert>
 #include <format>
 #include <iostream>
-#include <memory>
 #include <optional>
 #include <unordered_map>
 
@@ -72,20 +72,16 @@ struct Viewer {
     std::optional<Move> lastMove;
     std::vector<Player> players;
 
-    Texture2D boardTexture;
-    std::unordered_map<uint8_t, Texture2D> pieceTextures;
+    Texture2D boardTexture = CreateBoardTexture();
+    std::unordered_map<uint8_t, Texture2D> pieceTextures = CreatePieceTextures();
 
     Viewer(ViewerOptions v)
         : options(std::move(v)),
-          position(CreateDefaultPosition()),
+          position(ParseFEN(options.fen)),
           transition(),
           lastMove(std::nullopt),
-          players(),
-          boardTexture(),
-          pieceTextures()
+          players()
     {
-        boardTexture = CreateBoardTexture();
-        pieceTextures = CreatePieceTextures();
         assert(options.players.size() == 2);
         for (const auto &player : options.players) {
             players.emplace_back(MakePlayer(player));
