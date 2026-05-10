@@ -2,6 +2,7 @@
 #include "FEN.h"
 #include "Perft.h"
 #include "Player.h"
+#include "Test.h"
 #include "Viewer.h"
 #include <algorithm>
 #include <chrono>
@@ -26,10 +27,11 @@ enum class Mode {
     List,
     Perft,
     Play,
+    Test,
     Watch,
 };
 
-const static std::string modes[] = {"help", "bench", "list", "perft", "play", "watch"};
+const static std::vector<std::string> modes = {"help", "bench", "list", "perft", "play", "test", "watch"};
 
 void Die(std::string msg = "")
 {
@@ -41,6 +43,7 @@ void Die(std::string msg = "")
     std::cerr << "    " << programName << " help                   Display this message\n";
     std::cerr << "    " << programName << " list                   Returns a list of available players\n";
     std::cerr << "    " << programName << " perft [depth]          Run a perft performance/accuracy check with the specified depth\n";
+    std::cerr << "    " << programName << " test                   Checks perft against various positions, ensures accuracy\n";
     std::cerr << "    " << programName << " watch [white] [black]  Watch `white` play `black`\n";
     std::exit(1);
 }
@@ -60,11 +63,16 @@ static Args parseArgs(int argc, char **argv)
         args.mode = Mode::Help;
         return args;
     }
-    for (int i = 0; i < 6; i++) {
+    if (vec.size() == 2 && (vec[1] == "-h" || vec[1] == "--help")) {
+        args.mode = Mode::Help;
+        return args;
+    }
+    for (size_t i = 0; i < modes.size(); i++) {
         if (vec[1] == modes[i]) {
             args.mode = static_cast<Mode>(i);
         }
     }
+
     std::copy_if(vec.begin() + 2, vec.end(), std::back_inserter(args.players),
                  [argv](const auto &arg) { return arg != argv[0] && arg[0] != '-'; });
 
@@ -179,6 +187,9 @@ int main(int argc, char **argv)
         break;
     case Mode::Play:
         Die("Not implemented");
+        break;
+    case Mode::Test:
+        RunTests();
         break;
     case Mode::Watch:
         Watch(opt);

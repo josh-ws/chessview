@@ -3,5 +3,5 @@ CFLAGS=-O3  -march=native -pipe -Wall -Wextra -Wfatal-errors -pedantic -Weffc++ 
 DEPENDS=-lraylib
 OUT=chess
 
-all: Bitboard.cc Viewer.cc main.cc Player.cc FEN.cc Perft.cc
-	$(CC) $(DEPENDS) $(CFLAGS) Bitboard.cc Viewer.cc main.cc Player.cc FEN.cc Perft.cc -o $(OUT)
+all: Bitboard.cc Viewer.cc main.cc Player.cc FEN.cc Perft.cc Test.cc
+	$(CC) $(DEPENDS) $(CFLAGS) Bitboard.cc Viewer.cc main.cc Player.cc FEN.cc Perft.cc Test.cc -o $(OUT)
