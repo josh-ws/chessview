@@ -119,3 +119,9 @@ These are the built-in bots, ready to play against.
 - FEN import, to start from a known position.
 - Tournaments between bots.
 - Recording of games to files (probably in PGN notation).
+
+## Licensing
+
+This project is MIT licensed (see LICENSE) and bundles:
+
+- [CLI11](https://https://github.com/CLIUtils/CLI11) - Command line parsing, BSD 3-clause
