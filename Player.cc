@@ -40,6 +40,21 @@ static int Chebyshev(int a, int b)
     return std::max(dx, dy);
 }
 
+static int DistanceSumFromKing(const Position &p, CColor color, int target)
+{
+    const auto kingSq = std::countr_zero(p.bitboards[color][KING]);
+    auto total = 0;
+    for (int sq = 0; sq < 64; sq++) {
+        if (sq == kingSq)
+            continue;
+        const auto pc = GetPiece(p, ColOf(sq), RowOf(sq));
+        if (pc == NONE || ColorOf(pc) != color)
+            continue;
+        total += Chebyshev(sq, target);
+    }
+    return total;
+}
+
 static int EvaluateMaterial(const Position &p, CColor color)
 {
     static const int pieceScores[] = {1, 0, 8, 3, 3, 5, 0};
@@ -91,15 +106,18 @@ static int EvaluationHuddle(Position &p, const Move &m)
     const auto color = p.whoseturn;
     const auto u = MakeMove(p, m);
     const auto kingSq = std::countr_zero(p.bitboards[color][KING]);
-    auto total = 0;
-    for (int sq = 0; sq < 64; sq++) {
-        if (sq == kingSq)
-            continue;
-        const auto pc = GetPiece(p, ColOf(sq), RowOf(sq));
-        if (pc == NONE || ColorOf(pc) != color)
-            continue;
-        total += Chebyshev(sq, kingSq);
-    }
+    const auto total = -DistanceSumFromKing(p, color, kingSq);
+    UndoMove(p, m, u);
+    return total;
+}
+
+static int EvaluationSwarm(Position &p, const Move &m)
+{
+    const auto us = p.whoseturn;
+    const auto them = static_cast<CColor>(p.whoseturn ^ 1);
+    const auto u = MakeMove(p, m);
+    const auto enemyKingSq = std::countr_zero(p.bitboards[them][KING]);
+    const auto total = -DistanceSumFromKing(p, us, enemyKingSq);
     UndoMove(p, m, u);
     return total;
 }
@@ -132,6 +150,20 @@ const static std::vector<Player> players = {
         .description = "Moves pieces away from its own King",
         .evaluation = [](Position &p, const Move &m) {
             return -EvaluationHuddle(p, m);
+        },
+    },
+    Player{
+        .name = "swarm",
+        .description = "Swarms the enemy King with pieces",
+        .evaluation = [](Position &p, const Move &m) {
+            return EvaluationSwarm(p, m);
+        },
+    },
+    Player{
+        .name = "passive",
+        .description = "Opposite of `swarm`, avoids swarming the enemy King",
+        .evaluation = [](Position &p, const Move &m) {
+            return -EvaluationSwarm(p, m);
         },
     }};
 
