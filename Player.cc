@@ -1,5 +1,6 @@
 #include "Player.h"
 #include "Bitboard.h"
+#include <algorithm>
 #include <bit>
 #include <climits>
 #include <random>
@@ -30,6 +31,13 @@ Move Player::GetMove(Position &p) const
         }
     }
     return selected;
+}
+
+static int Chebyshev(int a, int b)
+{
+    int dx = std::abs((a & 7) - (b & 7));
+    int dy = std::abs((a >> 3) - (b >> 3));
+    return std::max(dx, dy);
 }
 
 static int EvaluateMaterial(const Position &p, CColor color)
@@ -78,6 +86,24 @@ static int EvaluationRawMaterial(Position &p, const Move &m)
     return score;
 }
 
+static int EvaluationHuddle(Position &p, const Move &m)
+{
+    const auto color = p.whoseturn;
+    const auto u = MakeMove(p, m);
+    const auto kingSq = std::countr_zero(p.bitboards[color][KING]);
+    auto total = 0;
+    for (int sq = 0; sq < 64; sq++) {
+        if (sq == kingSq)
+            continue;
+        const auto pc = GetPiece(p, ColOf(sq), RowOf(sq));
+        if (pc == NONE || ColorOf(pc) != color)
+            continue;
+        total += Chebyshev(sq, kingSq);
+    }
+    UndoMove(p, m, u);
+    return total;
+}
+
 const static std::vector<Player> players = {
     Player{
         .name = "random",
@@ -94,7 +120,20 @@ const static std::vector<Player> players = {
         .description = "Greedily maximizes material",
         .evaluation = EvaluationRawMaterial,
     },
-};
+    Player{
+        .name = "huddle",
+        .description = "Huddles pieces around its own King",
+        .evaluation = [](Position &p, const Move &m) {
+            return EvaluationHuddle(p, m);
+        },
+    },
+    Player{
+        .name = "anti-huddle",
+        .description = "Moves pieces away from its own King",
+        .evaluation = [](Position &p, const Move &m) {
+            return -EvaluationHuddle(p, m);
+        },
+    }};
 
 std::vector<Player> GetPlayerList() { return players; }
 

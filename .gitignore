@@ -1,5 +1,6 @@
 /.vscode
 /Tests
 /chess
+/build
 perft.txt
 todo
