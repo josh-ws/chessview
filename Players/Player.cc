@@ -135,6 +135,34 @@ const static std::vector<Player> players = {
             return -EvaluationMinSelf(p, m);
         },
     },
+    Player{
+        .name = "attacker",
+        .description = "Maximizes the number of opponent pieces under attack",
+        .evaluation = [](Position &p, const Move &m) {
+            return EvaluationAttacker(p, m);
+        },
+    },
+    Player{
+        .name = "defender",
+        .description = "Minimizes the number of own pieces under attack",
+        .evaluation = [](Position &p, const Move &m) {
+            return EvaluationDefender(p, m);
+        },
+    },
+    Player{
+        .name = "generous",
+        .description = "Maximizes number of own pieces up for capture",
+        .evaluation = [](Position &p, const Move &m) {
+            return -EvaluationDefender(p, m);
+        },
+    },
+    Player{
+        .name = "pacifist",
+        .description = "Minimizes the number of opponent pieces under attack",
+        .evaluation = [](Position &p, const Move &m) {
+            return -EvaluationAttacker(p, m);
+        },
+    },
 };
 
 std::vector<Player> GetPlayerList()

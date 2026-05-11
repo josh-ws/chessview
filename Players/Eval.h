@@ -19,3 +19,6 @@ int EvaluationEdge(Position &p, const Move &m);
 
 int EvaluationMinResponse(Position &p, const Move &m);
 int EvaluationMinSelf(Position &p, const Move &m);
+
+int EvaluationAttacker(Position &p, const Move &m);
+int EvaluationDefender(Position &p, const Move &m);

@@ -221,3 +221,41 @@ int EvaluationMinSelf(Position &p, const Move &m)
     copy.whoseturn = static_cast<CColor>(copy.whoseturn ^ 1); // ...we need to flip whose turn
     return -GenerateMoves(copy).size();
 }
+
+// maximizes number of opponent pieces under attack
+int EvaluationAttacker(Position &p, const Move &m)
+{
+    const auto us = p.whoseturn;
+    const auto them = p.whoseturn ^ 1;
+    const auto undo = MakeMove(p, m);
+    auto score = 0;
+
+    auto b = p.occupancy[them];
+    while (b) {
+        const auto sq = std::countr_zero(b);
+        b &= b - 1;
+        if (IsAttacked(p, ColOf(sq), RowOf(sq), us))
+            score += 1;
+    }
+    UndoMove(p, m, undo);
+    return score;
+}
+
+// minimizes number of own pieces under attack
+int EvaluationDefender(Position &p, const Move &m)
+{
+    const auto us = p.whoseturn;
+    const auto them = p.whoseturn ^ 1;
+    const auto undo = MakeMove(p, m);
+    auto score = 0;
+
+    auto b = p.occupancy[us];
+    while (b) {
+        const auto sq = std::countr_zero(b);
+        b &= b - 1;
+        if (IsAttacked(p, ColOf(sq), RowOf(sq), them))
+            score += 1;
+    }
+    UndoMove(p, m, undo);
+    return -score;
+}
