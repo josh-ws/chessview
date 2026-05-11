@@ -13,11 +13,8 @@ static int Chebyshev(int a, int b)
 
 static int DistanceSumFromKing(const Position &p, CColor color, int target)
 {
-    const auto kingSq = std::countr_zero(p.bitboards[color][KING]);
     auto total = 0;
     for (int sq = 0; sq < 64; sq++) {
-        if (sq == kingSq)
-            continue;
         const auto pc = GetPiece(p, ColOf(sq), RowOf(sq));
         if (pc == NONE || ColorOf(pc) != color)
             continue;
