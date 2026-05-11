@@ -4,7 +4,8 @@ LDLIBS=-lraylib
 OUT=chess
 BUILD=build
 
-SRCS = Bitboard.cc Viewer.cc main.cc Player.cc FEN.cc Perft.cc Test.cc
+SRCS = Bitboard.cc Viewer.cc main.cc FEN.cc Perft.cc Test.cc \
+       Players/Player.cc Players/Eval.cc
 OBJS = $(SRCS:%.cc=$(BUILD)/%.o)
 DEPS = $(OBJS:.o=.d)
 
@@ -13,11 +14,9 @@ all: $(OUT)
 $(OUT): $(OBJS)
 	$(CC) $(OBJS) $(LDLIBS) -o $@
 
-$(BUILD)/%.o: %.cc | $(BUILD)
+$(BUILD)/%.o: %.cc
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD):
-	mkdir -p $(BUILD)
 
 clean:
 	rm -rf $(BUILD) $(OUT)

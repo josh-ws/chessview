@@ -2,14 +2,12 @@
 #include "CLI11.hpp"
 #include "FEN.h"
 #include "Perft.h"
-#include "Player.h"
+#include "Players/Player.h"
 #include "Test.h"
 #include "Viewer.h"
-#include <algorithm>
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
-#include <iterator>
 #include <random>
 #include <stdexcept>
 #include <string>

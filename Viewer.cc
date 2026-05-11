@@ -2,7 +2,7 @@
 
 #include "Bitboard.h"
 #include "FEN.h"
-#include "Player.h"
+#include "Players/Player.h"
 #include "raylib.h"
 #include <cassert>
 #include <format>
@@ -111,7 +111,7 @@ struct Viewer {
             return;
 
         const auto idx = position.whoseturn == CWHITE ? 0 : 1;
-        const auto move = players[idx].GetMove(position);
+        const auto move = GetMove(players[idx], position);
         const auto captured = GetPiece(position, ColOf(move.to), RowOf(move.to));
         MakeMove(position, move);
         transition.Start(move, TRANSITION_FRAMES, captured);
