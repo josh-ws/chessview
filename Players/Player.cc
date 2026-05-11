@@ -108,57 +108,64 @@ const static std::vector<Player> players = {
         },
     },
     Player{
-        .name = "min-responses",
-        .description = "Minimizes number of response moves opponent has",
+        .name = "edge",
+        .description = "Positions pieces towards the edge of the board",
+        .evaluation = [](Position &p, const Move &m) {
+            return EvaluationEdge(p, m);
+        },
+    },
+    Player{
+        .name = "smother",
+        .description = "Reduces number of response moves the opponent can make",
         .evaluation = [](Position &p, const Move &m) {
             return EvaluationMinResponse(p, m);
         },
     },
     Player{
-        .name = "max-responses",
-        .description = "Maximizes number of response moves opponent has",
+        .name = "liberate",
+        .description = "Opposite of `smother`, instead maximizes number of responses",
         .evaluation = [](Position &p, const Move &m) {
             return -EvaluationMinResponse(p, m);
         },
     },
     Player{
-        .name = "min-self",
-        .description = "Minimizes number of possible moves that self has",
+        .name = "corner",
+        .description = "Backs self into a corner by reducing number of possible moves",
         .evaluation = [](Position &p, const Move &m) {
             return EvaluationMinSelf(p, m);
         },
     },
     Player{
-        .name = "max-self",
-        .description = "Maximizes number of possible moves that self has",
+        .name = "nimble",
+        .description = "Opposite of `corner`, maximises number of possible moves",
         .evaluation = [](Position &p, const Move &m) {
             return -EvaluationMinSelf(p, m);
         },
     },
     Player{
         .name = "attacker",
-        .description = "Maximizes the number of opponent pieces under attack",
+        .description = "Attacks as many opponent pieces as possible",
         .evaluation = [](Position &p, const Move &m) {
             return EvaluationAttacker(p, m);
         },
     },
     Player{
         .name = "defender",
-        .description = "Minimizes the number of own pieces under attack",
+        .description = "Reduces number of own pieces under attack",
         .evaluation = [](Position &p, const Move &m) {
             return EvaluationDefender(p, m);
         },
     },
     Player{
         .name = "generous",
-        .description = "Maximizes number of own pieces up for capture",
+        .description = "Offers up as many pieces as possible for capture",
         .evaluation = [](Position &p, const Move &m) {
             return -EvaluationDefender(p, m);
         },
     },
     Player{
         .name = "pacifist",
-        .description = "Minimizes the number of opponent pieces under attack",
+        .description = "Tries not to attack any opponent pieces, if possible",
         .evaluation = [](Position &p, const Move &m) {
             return -EvaluationAttacker(p, m);
         },

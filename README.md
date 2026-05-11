@@ -68,8 +68,8 @@ Viewer controls:
 
 ```
 $ chessview list
-blacksquares: ...
-center: ...
+random: ...
+cccp: ...
 ...
 ```
 
@@ -83,23 +83,32 @@ $ chessview test
 
 ### Players
 
-These are the built-in bots, ready to play against.
+These are the built-in bots:
 
 - random: Plays completely random moves using mt19937
-- whitesquares: Plays moves that land pieces on white tiles
-- blacksquares: Plays moves that land pieces on black tiles
-- center: Moves pieces as close to the center as possible
-- min_oppt: Tries to minimize the number of moves the opponent has
-- max_oppt: Tries to maximize the number of moves the opponent has
-- min_self: Tries to minimize the number of moves that the player has
-- max_self: Tries to maximize the number of moves that the player has
-- defensive: Tries to minimize the number of own pieces under attack
-- offensive: Tries to maximize the number of enemy pieces under attack
-- reckless: Tries to maximize the number of own pieces under attack
-- pacifist: Tries to minumize the number of enemy pieces under attack
-- edge: Tries to move pieces towards the edge of the board
-- aggressive: Tries to move pieces towards the enemy's side
-- passive: Tries not to move pieces towards the enemy's side
+- cccp: Checkmate, check, capture, push
+- material: Greedily maximizes material
+- huddle: Huddles pieces around its own King
+- anti-huddle: Moves pieces away from its own King
+- swarm: Swarms the enemy King with pieces
+- passive: Opposite of `swarm`, avoids swarming the enemy King
+- glue: Keeps pieces as close together as possible
+- repel: Pieces repel away from each other, opposite of `glue`
+- white-squares: Lands pieces on white squares
+- black-squares: Lands pieces on black squares
+- mirror-x: Mirrors the board along the X axis
+- mirror-y: Mirrors the board along the Y axis
+- mirror-xy: Mirrors the board along the X and Y axis
+- center: Positions pieces in the center of the board
+- edge: Positions pieces towards the edge of the board
+- smother: Reduces number of response moves the opponent can make
+- liberate: Opposite of `smother`, instead maximizes number of responses
+- corner: Backs self into a corner by reducing number of possible moves
+- nimble: Opposite of `corner`, maximises number of possible moves
+- attacker: Attacks as many opponent pieces as possible
+- defender: Reduces number of own pieces under attack
+- generous: Offers up as many pieces as possible for capture
+- pacifist: Tries not to attack any opponent pieces, if possible)
 
 ## Planned
 
