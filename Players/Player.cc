@@ -83,30 +83,35 @@ const static std::vector<Player> players = {
         .name = "mirror-x",
         .description = "Mirrors the board along the X axis",
         .evaluation = [](Position &p, const Move &m) {
-            const auto u = MakeMove(p, m);
-            const auto score = EvaluationMirrorX(p, m);
-            UndoMove(p, m, u);
-            return score;
+            return EvaluationMirrorX(p, m);
         },
     },
     Player{
         .name = "mirror-y",
         .description = "Mirrors the board along the Y axis",
         .evaluation = [](Position &p, const Move &m) {
-            const auto u = MakeMove(p, m);
-            const auto score = EvaluationMirrorY(p, m);
-            UndoMove(p, m, u);
-            return score;
+            return EvaluationMirrorY(p, m);
         },
     },
     Player{
         .name = "mirror-xy",
         .description = "Mirrors the board along the X and Y axis",
         .evaluation = [](Position &p, const Move &m) {
-            const auto u = MakeMove(p, m);
-            const auto score = EvaluationMirrorXY(p, m);
-            UndoMove(p, m, u);
-            return score;
+            return EvaluationMirrorXY(p, m);
+        },
+    },
+    Player{
+        .name = "center",
+        .description = "Positions pieces in the center of the board",
+        .evaluation = [](Position &p, const Move &m) {
+            return EvaluationCenter(p, m);
+        },
+    },
+    Player{
+        .name = "edge",
+        .description = "Positions pieces on the edge of the board",
+        .evaluation = [](Position &p, const Move &m) {
+            return EvaluationEdge(p, m);
         },
     }};
 

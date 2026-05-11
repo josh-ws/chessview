@@ -28,7 +28,7 @@ int EvaluateMaterial(const Position &p, CColor color)
 {
     static const int pieceScores[] = {1, 0, 8, 3, 3, 5, 0};
     auto score = 0;
-    for (const auto piece : {QUEEN, ROOK, BISHOP, KNIGHT, ROOK, PAWN}) {
+    for (const auto piece : {QUEEN, ROOK, BISHOP, KNIGHT, KING, PAWN}) {
         const auto count = std::popcount(p.bitboards[color][piece]);
         score += (count * pieceScores[piece]);
     }
@@ -165,4 +165,40 @@ int EvaluationMirrorY(Position &p, const Move &m)
 int EvaluationMirrorXY(Position &p, const Move &m)
 {
     return EvaluationMirror(p, m, MirrorXY);
+}
+
+int EvaluationCenter(Position &p, const Move &m)
+{
+    const auto us = p.whoseturn;
+    const auto undo = MakeMove(p, m);
+
+    auto score = 0;
+    auto b = p.occupancy[us];
+    while (b) {
+        const auto sq = std::countr_zero(b);
+        b &= b - 1;
+        if (ColOf(sq) >= 3 && ColOf(sq) <= 4 && RowOf(sq) >= 3 && RowOf(sq) <= 4)
+            score += 2;
+        else if (ColOf(sq) >= 2 && ColOf(sq) <= 5 && RowOf(sq) >= 2 && RowOf(sq) <= 5)
+            score += 1;
+    }
+    UndoMove(p, m, undo);
+    return score;
+}
+
+int EvaluationEdge(Position &p, const Move &m)
+{
+    const auto us = p.whoseturn;
+    const auto undo = MakeMove(p, m);
+
+    auto score = 0;
+    auto b = p.occupancy[us];
+    while (b) {
+        const auto sq = std::countr_zero(b);
+        b &= b - 1;
+        if ((ColOf(sq) == 0 || ColOf(sq) == 7))
+            score += 1;
+    }
+    UndoMove(p, m, undo);
+    return score;
 }
