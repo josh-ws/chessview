@@ -109,3 +109,19 @@ int EvaluationGlue(Position &p, const Move &m)
     UndoMove(p, m, u);
     return -total;
 }
+
+int EvaluationWhiteSquares(Position &p, const Move &m)
+{
+    const auto us = p.whoseturn;
+    const auto u = MakeMove(p, m);
+    auto b = p.occupancy[us];
+    auto count = 0;
+    while (b) {
+        const auto sq = std::countr_zero(b);
+        b &= b - 1;
+        if ((ColOf(sq) + RowOf(sq)) % 2 == 1)
+            count += 1;
+    }
+    UndoMove(p, m, u);
+    return count;
+}

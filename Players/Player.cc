@@ -64,6 +64,20 @@ const static std::vector<Player> players = {
         .evaluation = [](Position &p, const Move &m) {
             return -EvaluationGlue(p, m);
         },
+    },
+    Player{
+        .name = "white-squares",
+        .description = "Lands pieces on white squares",
+        .evaluation = [](Position &p, const Move &m) {
+            return EvaluationWhiteSquares(p, m);
+        },
+    },
+    Player{
+        .name = "black-squares",
+        .description = "Lands pieces on black squares",
+        .evaluation = [](Position &p, const Move &m) {
+            return -EvaluationWhiteSquares(p, m);
+        },
     }};
 
 std::vector<Player> GetPlayerList()

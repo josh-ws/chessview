@@ -10,3 +10,6 @@ int EvaluationSwarm(Position &p, const Move &m);
 
 // Evaluation that assesses how close the pieces are to each other
 int EvaluationGlue(Position &p, const Move &m);
+
+// Assesses how many pieces are on white squares
+int EvaluationWhiteSquares(Position &p, const Move &m);
