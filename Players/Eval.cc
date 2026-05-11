@@ -202,3 +202,22 @@ int EvaluationEdge(Position &p, const Move &m)
     UndoMove(p, m, undo);
     return score;
 }
+
+// minimizes number of opponent responses
+int EvaluationMinResponse(Position &p, const Move &m)
+{
+    const auto undo = MakeMove(p, m);
+    auto moves = GenerateMoves(p);
+    UndoMove(p, m, undo);
+    return -moves.size();
+}
+
+// minimizes number of own moves
+int EvaluationMinSelf(Position &p, const Move &m)
+{
+    const auto undo = MakeMove(p, m);
+    auto copy = p; // explicitly copy the position, because...
+    UndoMove(p, m, undo);
+    copy.whoseturn = static_cast<CColor>(copy.whoseturn ^ 1); // ...we need to flip whose turn
+    return -GenerateMoves(copy).size();
+}

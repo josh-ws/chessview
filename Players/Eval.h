@@ -16,3 +16,6 @@ int EvaluationMirrorXY(Position &p, const Move &m);
 
 int EvaluationCenter(Position &p, const Move &m);
 int EvaluationEdge(Position &p, const Move &m);
+
+int EvaluationMinResponse(Position &p, const Move &m);
+int EvaluationMinSelf(Position &p, const Move &m);

@@ -108,12 +108,34 @@ const static std::vector<Player> players = {
         },
     },
     Player{
-        .name = "edge",
-        .description = "Positions pieces on the edge of the board",
+        .name = "min-responses",
+        .description = "Minimizes number of response moves opponent has",
         .evaluation = [](Position &p, const Move &m) {
-            return EvaluationEdge(p, m);
+            return EvaluationMinResponse(p, m);
         },
-    }};
+    },
+    Player{
+        .name = "max-responses",
+        .description = "Maximizes number of response moves opponent has",
+        .evaluation = [](Position &p, const Move &m) {
+            return -EvaluationMinResponse(p, m);
+        },
+    },
+    Player{
+        .name = "min-self",
+        .description = "Minimizes number of possible moves that self has",
+        .evaluation = [](Position &p, const Move &m) {
+            return EvaluationMinSelf(p, m);
+        },
+    },
+    Player{
+        .name = "max-self",
+        .description = "Maximizes number of possible moves that self has",
+        .evaluation = [](Position &p, const Move &m) {
+            return -EvaluationMinSelf(p, m);
+        },
+    },
+};
 
 std::vector<Player> GetPlayerList()
 {
