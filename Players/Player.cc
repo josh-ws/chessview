@@ -78,6 +78,36 @@ const static std::vector<Player> players = {
         .evaluation = [](Position &p, const Move &m) {
             return -EvaluationWhiteSquares(p, m);
         },
+    },
+    Player{
+        .name = "mirror-x",
+        .description = "Mirrors the board along the X axis",
+        .evaluation = [](Position &p, const Move &m) {
+            const auto u = MakeMove(p, m);
+            const auto score = EvaluationMirrorX(p, m);
+            UndoMove(p, m, u);
+            return score;
+        },
+    },
+    Player{
+        .name = "mirror-y",
+        .description = "Mirrors the board along the Y axis",
+        .evaluation = [](Position &p, const Move &m) {
+            const auto u = MakeMove(p, m);
+            const auto score = EvaluationMirrorY(p, m);
+            UndoMove(p, m, u);
+            return score;
+        },
+    },
+    Player{
+        .name = "mirror-xy",
+        .description = "Mirrors the board along the X and Y axis",
+        .evaluation = [](Position &p, const Move &m) {
+            const auto u = MakeMove(p, m);
+            const auto score = EvaluationMirrorXY(p, m);
+            UndoMove(p, m, u);
+            return score;
+        },
     }};
 
 std::vector<Player> GetPlayerList()

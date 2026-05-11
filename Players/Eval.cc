@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <bit>
 #include <cstdlib>
+#include <functional>
 
 #include "../Bitboard.h"
 
@@ -124,4 +125,44 @@ int EvaluationWhiteSquares(Position &p, const Move &m)
     }
     UndoMove(p, m, u);
     return count;
+}
+
+static int MirrorX(int sq) { return ColOf(sq) + (7 - RowOf(sq)) * 8; }
+static int MirrorY(int sq) { return (7 - ColOf(sq)) + RowOf(sq) * 8; }
+static int MirrorXY(int sq) { return (7 - ColOf(sq)) + (7 - RowOf(sq)) * 8; }
+
+using MirrorFn = std::function<int(int)>;
+
+static int EvaluationMirror(Position &p, const Move &m, auto mirrorFn)
+{
+    auto score = 0;
+    const auto undo = MakeMove(p, m);
+    for (int sq = 0; sq < 64; sq++) {
+        const auto pc = GetPiece(p, ColOf(sq), RowOf(sq));
+        const auto m = mirrorFn(sq);
+        const auto mpc = GetPiece(p, ColOf(m), RowOf(m));
+        if (pc == NONE || mpc == NONE)
+            continue;
+        if (TypeOf(pc) == TypeOf(mpc))
+            score += 2;
+        else
+            score += 1;
+    }
+    UndoMove(p, m, undo);
+    return score;
+}
+
+int EvaluationMirrorX(Position &p, const Move &m)
+{
+    return EvaluationMirror(p, m, MirrorX);
+}
+
+int EvaluationMirrorY(Position &p, const Move &m)
+{
+    return EvaluationMirror(p, m, MirrorY);
+}
+
+int EvaluationMirrorXY(Position &p, const Move &m)
+{
+    return EvaluationMirror(p, m, MirrorXY);
 }

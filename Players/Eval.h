@@ -13,3 +13,7 @@ int EvaluationGlue(Position &p, const Move &m);
 
 // Assesses how many pieces are on white squares
 int EvaluationWhiteSquares(Position &p, const Move &m);
+
+int EvaluationMirrorX(Position &p, const Move &m);
+int EvaluationMirrorY(Position &p, const Move &m);
+int EvaluationMirrorXY(Position &p, const Move &m);
