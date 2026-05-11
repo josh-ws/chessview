@@ -1,6 +1,5 @@
-#pragma once
-
 #include <algorithm>
+#include <bit>
 #include <cstdlib>
 
 #include "../Bitboard.h"
@@ -92,4 +91,24 @@ int EvaluationSwarm(Position &p, const Move &m)
     const auto total = -DistanceSumFromKing(p, us, enemyKingSq);
     UndoMove(p, m, u);
     return total;
+}
+
+int EvaluationGlue(Position &p, const Move &m)
+{
+    const auto us = p.whoseturn;
+    const auto u = MakeMove(p, m);
+    int total = 0;
+    auto outer = p.occupancy[us];
+    while (outer) {
+        const auto i = std::countr_zero(outer);
+        outer &= outer - 1;
+        auto inner = outer;
+        while (inner) {
+            const auto j = std::countr_zero(inner);
+            inner &= inner - 1;
+            total += Chebyshev(i, j);
+        }
+    }
+    UndoMove(p, m, u);
+    return -total;
 }

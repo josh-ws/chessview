@@ -50,6 +50,20 @@ const static std::vector<Player> players = {
         .evaluation = [](Position &p, const Move &m) {
             return -EvaluationSwarm(p, m);
         },
+    },
+    Player{
+        .name = "glue",
+        .description = "Keeps pieces as close together as possible",
+        .evaluation = [](Position &p, const Move &m) {
+            return EvaluationGlue(p, m);
+        },
+    },
+    Player{
+        .name = "repel",
+        .description = "Pieces repel away from each other, opposite of `glue`",
+        .evaluation = [](Position &p, const Move &m) {
+            return -EvaluationGlue(p, m);
+        },
     }};
 
 std::vector<Player> GetPlayerList()
